@@ -15,11 +15,7 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
-# Register a custom font for better styling (assuming you have a TTF font file, e.g., Roboto)
-try:
-    pdfmetrics.registerFont(TTFont('Roboto', 'path/to/Roboto-Regular.ttf'))  # Replace with actual path or use default
-except:
-    pass  # Fall back to default fonts
+# Removed custom font registration to avoid path errors; using default Helvetica
 
 def generate_pdf_report(scan_data: dict) -> str:
     """Generate a comprehensive, stylish PDF report."""
@@ -45,7 +41,7 @@ def generate_pdf_report(scan_data: dict) -> str:
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontName='Helvetica-Bold',  # or 'Roboto-Bold'
+            fontName='Helvetica-Bold',
             fontSize=28,
             spaceAfter=30,
             alignment=TA_CENTER,
@@ -307,6 +303,56 @@ def generate_pdf_report(scan_data: dict) -> str:
         story.append(threat_table)
         story.append(Spacer(1, 30))
         
+        # Traceroute
+        story.append(Paragraph("🛤️ Traceroute", heading_style))
+        traceroute_data = recon_data.get('traceroute', {})
+        if not traceroute_data.get('error'):
+            traceroute_table_data = [['Hop']]
+            for hop in traceroute_data.get('hops', []):
+                traceroute_table_data.append([hop])
+            
+            traceroute_table = Table(traceroute_table_data, colWidths=[6*inch])
+            traceroute_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1'))
+            ]))
+            story.append(traceroute_table)
+        else:
+            story.append(Paragraph(f"Traceroute unavailable: {traceroute_data.get('error', 'Unknown error')}", normal_style))
+        story.append(Spacer(1, 30))
+        
+        # Reverse IP Lookup
+        story.append(Paragraph("🔄 Reverse IP Lookup", heading_style))
+        reverse_ip = recon_data.get('reverse_ip', [])
+        if reverse_ip:
+            reverse_table_data = [['Domain']]
+            for dom in reverse_ip[:20]:
+                reverse_table_data.append([dom])
+            
+            reverse_table = Table(reverse_table_data, colWidths=[6*inch])
+            reverse_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1'))
+            ]))
+            story.append(reverse_table)
+            if len(reverse_ip) > 20:
+                story.append(Paragraph(f"... and {len(reverse_ip) - 20} more", normal_style))
+        else:
+            story.append(Paragraph("No domains found on the same IP.", normal_style))
+        story.append(Spacer(1, 30))
+        
         # Subdomains
         subdomains = recon_data.get('subdomains', [])
         if subdomains:
@@ -374,12 +420,12 @@ def generate_pdf_report(scan_data: dict) -> str:
         story.append(Spacer(1, 30))
         
         # OWASP Vulnerability Checklist
-        story.append(Paragraph("🛡️ OWASP Top 10 Vulnerability Checklist (2025 Prediction)", heading_style))
+        story.append(Paragraph("🛡️ OWASP Top 10 Vulnerability Checklist (2025)", heading_style))
         owasp_checks = recon_data.get('owasp_checks', [])
         if owasp_checks:
             owasp_table_data = [['Vulnerability', 'Status', 'Details']]
             for check in owasp_checks:
-                status_color = '#059669' if check['status'] == 'Low Risk' else '#dc2626' if check['status'] == 'High Risk' else '#d97706'
+                status_color = '#059669' if check['status'] == 'Low Risk' else '#dc2626' if check['status'] == 'High Risk' else '#d97706' if check['status'] == 'Potential Risk' else '#6b7280'
                 owasp_table_data.append([check['name'], f"<font color='{status_color}'>{check['status']}</font>", check['details']])
             
             owasp_table = Table(owasp_table_data, colWidths=[2*inch, 1.5*inch, 2.5*inch])
@@ -392,7 +438,6 @@ def generate_pdf_report(scan_data: dict) -> str:
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
-                ('SPAN', (0, 0), (2, 0)),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
             ]))
             story.append(owasp_table)
@@ -445,7 +490,7 @@ def generate_pdf_report(scan_data: dict) -> str:
             spaceBefore=20
         )))
         
-        # Build PDF with custom canvas for headers/footers if needed
+        # Build PDF with custom canvas for custom headers/footers if needed
         def add_page_number(canvas, doc):
             canvas.setFont("Helvetica", 9)
             canvas.drawString(0.75*inch, 0.5*inch, f"Page {doc.page}")

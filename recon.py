@@ -1,4 +1,3 @@
-import subprocess
 import requests
 import dns.resolver
 import ssl
@@ -246,18 +245,7 @@ def get_traceroute(domain: str) -> dict:
         }
     except Exception as e:
         logger.error(f"Traceroute unavailable for {domain}: {str(e)}")
-        # Fallback to local traceroute if API fails
-        try:
-            cmd = ['tracert', '-d', '-w', '1000', ip] if os.name == 'nt' else ['traceroute', ip]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            hops = [line.strip() for line in result.stdout.split('\n') if line.strip() and ('ms' in line or '*' in line)]
-            return {
-                'ip': ip,
-                'hops': hops[:10]
-            }
-        except Exception as e2:
-            logger.error(f"Local traceroute fallback failed for {domain}: {str(e2)}")
-            return {'error': f'Traceroute failed: {str(e)}', 'hops': []}
+        return {'error': f'Traceroute failed: {str(e)}', 'hops': []}
 
 def get_domain_status(domain: str) -> dict:
     """Check if domain is active via HTTP/HTTPS."""
@@ -346,14 +334,24 @@ def get_reverse_ip_lookup(domain: str) -> list:
         return []
     
     try:
-        # Primary: HackerTarget API
+        # Primary: WhoisXMLAPI Reverse IP API (since key is available)
+        if WHOISXMLAPI_KEY:
+            url = f'https://reverse-ip.whoisxmlapi.com/api/v2?apiKey={WHOISXMLAPI_KEY}&ip={ip}'
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            domains = [result.get('name', '') for result in data.get('result', [])]
+            if domains:
+                return domains[:20]
+        
+        # Fallback: HackerTarget API
         response = requests.get(f'https://api.hackertarget.com/reverseiplookup/?q={ip}', timeout=15)
         response.raise_for_status()
         domains = response.text.splitlines()
         if domains and domains[0].lower() != 'error' and 'api count exceeded' not in domains[0].lower():
             return domains[:20]
         
-        # Fallback: ViewDNS.info
+        # Second Fallback: ViewDNS.info
         response = requests.get(f'https://api.viewdns.info/reverseip/?host={ip}&t=1', timeout=15)
         response.raise_for_status()
         data = response.json()
