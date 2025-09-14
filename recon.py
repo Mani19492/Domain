@@ -1,3 +1,4 @@
+import subprocess
 import requests
 import dns.resolver
 import ssl
