@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
-GOOGLE_SAFE_BROWSING_API_KEY = os.getenv('GOOGLE_SAFE_BROWSING_API_KEY')
+VIRUSTOTAL_API_KEY = os.getenv('VITE_VIRUSTOTAL_API_KEY')
+GOOGLE_SAFE_BROWSING_API_KEY = os.getenv('VITE_GOOGLE_SAFE_BROWSING_API_KEY')
 
 def check_authenticity(url: str) -> dict:
     """Check website authenticity using VirusTotal and Google Safe Browsing with fallback."""

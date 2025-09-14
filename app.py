@@ -8,6 +8,9 @@ from auth_check import check_authenticity, get_official_link
 from pdf_generator import generate_pdf_report
 import tempfile
 import uuid
+import re
+from functools import wraps
+from datetime import datetime, timedelta
 
 # Configure logging
 logging.basicConfig(
@@ -25,12 +28,43 @@ app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 # Store scan results temporarily (in production, use Redis or database)
 scan_results = {}
 
+# Simple rate limiting: track requests per IP
+request_times = {}
+
+def rate_limit(max_requests=5, window=300):  # 5 requests per 5 minutes
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            client_ip = request.remote_addr
+            now = datetime.now()
+            if client_ip not in request_times:
+                request_times[client_ip] = []
+            
+            # Remove old requests
+            request_times[client_ip] = [t for t in request_times[client_ip] if now - t < timedelta(seconds=window)]
+            
+            if len(request_times[client_ip]) >= max_requests:
+                return jsonify({'error': 'Rate limit exceeded'}), 429
+            
+            request_times[client_ip].append(now)
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def validate_domain(domain):
+    """Validate domain format to prevent injection/SSRF."""
+    domain_pattern = re.compile(
+        r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*\.([a-zA-Z]{2,})$'
+    )
+    return domain_pattern.match(domain) is not None
+
 @app.route('/')
 def index():
     """Main page."""
     return render_template('index.html')
 
 @app.route('/api/scan', methods=['POST'])
+@rate_limit()
 def scan_domain():
     """API endpoint to scan a domain."""
     try:
@@ -39,6 +73,9 @@ def scan_domain():
         
         if not domain:
             return jsonify({'error': 'Domain is required'}), 400
+        
+        if not validate_domain(domain):
+            return jsonify({'error': 'Invalid domain format'}), 400
         
         # Generate unique scan ID
         scan_id = str(uuid.uuid4())
@@ -126,4 +163,4 @@ def download_report(scan_id):
         return jsonify({'error': 'Failed to generate PDF'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)  # debug=False for production

@@ -2,7 +2,6 @@ import requests
 import dns.resolver
 import ssl
 import socket
-import subprocess
 import json
 from bs4 import BeautifulSoup
 from cachetools import TTLCache
@@ -12,6 +11,7 @@ import re
 import time
 import logging
 import random
+from urllib.parse import quote
 
 # Add python-whois import (install via pip install python-whois)
 try:
@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
-WHOISXMLAPI_KEY = os.getenv('WHOISXMLAPI_KEY')
+VIRUSTOTAL_API_KEY = os.getenv('VITE_VIRUSTOTAL_API_KEY')
+WHOISXMLAPI_KEY = os.getenv('VITE_WHOISXMLAPI_KEY')
 
 # Cache results to avoid hitting API limits (TTL: 1 hour)
 whois_cache = TTLCache(maxsize=100, ttl=3600)
@@ -227,29 +227,36 @@ def get_virustotal_data(domain: str) -> dict:
         }
 
 def get_traceroute(domain: str) -> dict:
-    """Perform traceroute to the domain's IP."""
+    """Perform traceroute using an external API."""
     ip = get_ip(domain)
     if not ip:
         return {'error': 'Unable to resolve IP', 'hops': []}
     
     try:
-        # Use tracert on Windows, traceroute on Unix
-        cmd = ['tracert', '-d', '-w', '1000', ip] if os.name == 'nt' else ['traceroute', ip]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        hops = []
-        lines = result.stdout.split('\n')
-        for line in lines:
-            if line.strip() and ('ms' in line or '*' in line):
-                hops.append(line.strip())
+        # Use HackerTarget's traceroute API
+        response = requests.get(f'https://api.hackertarget.com/traceroute/?q={ip}', timeout=30)
+        response.raise_for_status()
+        hops = response.text.splitlines()
+        cleaned_hops = [hop.strip() for hop in hops if hop.strip() and not hop.startswith('Tracing')]
         
         return {
             'ip': ip,
-            'hops': hops[:10]  # Limit to first 10 hops
+            'hops': cleaned_hops[:10]  # Limit to first 10 hops
         }
     except Exception as e:
         logger.error(f"Traceroute unavailable for {domain}: {str(e)}")
-        return {'error': str(e), 'hops': []}
+        # Fallback to local traceroute if API fails
+        try:
+            cmd = ['tracert', '-d', '-w', '1000', ip] if os.name == 'nt' else ['traceroute', ip]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            hops = [line.strip() for line in result.stdout.split('\n') if line.strip() and ('ms' in line or '*' in line)]
+            return {
+                'ip': ip,
+                'hops': hops[:10]
+            }
+        except Exception as e2:
+            logger.error(f"Local traceroute fallback failed for {domain}: {str(e2)}")
+            return {'error': f'Traceroute failed: {str(e)}', 'hops': []}
 
 def get_domain_status(domain: str) -> dict:
     """Check if domain is active via HTTP/HTTPS."""
@@ -287,7 +294,7 @@ def get_subdomains(domain: str) -> list:
         return subdomain_cache[domain]
     
     try:
-        response = requests.get(f'https://crt.sh/?q=%.{domain}&output=json', timeout=15)
+        response = requests.get(f'https://crt.sh/?q=%.{quote(domain)}&output=json', timeout=15)
         response.raise_for_status()
         subdomains = list(set(entry['name_value'].strip() for entry in response.json()))
         result = subdomains[:50]  # Limit to 50 subdomains
@@ -332,15 +339,24 @@ def get_service_name(port: int) -> str:
     return services.get(port, 'Unknown')
 
 def get_reverse_ip_lookup(domain: str) -> list:
-    """Find other domains on the same IP."""
+    """Find other domains on the same IP with fallback."""
     ip = get_ip(domain)
     if not ip:
         return []
     
     try:
+        # Primary: HackerTarget API
         response = requests.get(f'https://api.hackertarget.com/reverseiplookup/?q={ip}', timeout=15)
         response.raise_for_status()
         domains = response.text.splitlines()
+        if domains and domains[0].lower() != 'error' and 'api count exceeded' not in domains[0].lower():
+            return domains[:20]
+        
+        # Fallback: ViewDNS.info
+        response = requests.get(f'https://api.viewdns.info/reverseip/?host={ip}&t=1', timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        domains = [domain['name'] for domain in data.get('response', {}).get('domains', [])]
         return domains[:20] if domains else []
     except Exception as e:
         logger.error(f"Reverse IP Lookup unavailable for {domain}: {str(e)}")
@@ -458,28 +474,115 @@ def get_security_headers(domain: str) -> dict:
         logger.error(f"Security Headers unavailable for {domain}: {str(e)}")
         return {'error': str(e)}
 
-def get_wayback_images(domain: str) -> list:
-    """Fetch Wayback Machine image links."""
+def get_wayback_snapshots(domain: str) -> list:
+    """Fetch Wayback Machine snapshots with retry logic."""
     try:
-        response = requests.get(
-            f'http://web.archive.org/cdx/search/cdx?url={domain}/*&filter=mimetype:image.*&output=json&limit=10',
-            timeout=30
-        )
-        response.raise_for_status()
-        data = response.json()
+        for attempt in range(3):
+            try:
+                response = requests.get(
+                    f'https://web.archive.org/cdx/search/cdx?url=*.{quote(domain)}&output=json&limit=10&fl=timestamp,original,statuscode&filter=statuscode:200',
+                    timeout=30
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                snapshots = []
+                if len(data) > 1:  # Skip header
+                    for entry in data[1:]:
+                        if len(entry) >= 3:
+                            snapshots.append({
+                                'timestamp': entry[0],
+                                'url': f"https://web.archive.org/web/{entry[0]}/{entry[1]}",
+                                'status': entry[2]
+                            })
+                
+                if snapshots:
+                    return snapshots
+                else:
+                    logger.warning(f"No snapshots found for {domain} on attempt {attempt+1}")
+                    time.sleep(5)
+                    continue
+            except Exception as e:
+                logger.warning(f"Wayback Machine attempt {attempt+1} failed for {domain}: {str(e)}")
+                time.sleep(5)
         
-        links = []
-        for entry in data[1:]:  # Skip header
-            if len(entry) > 2:
-                links.append({
-                    'timestamp': entry[1],
-                    'url': f"https://web.archive.org/web/{entry[1]}/{entry[2]}"
-                })
-        
-        return links
-    except Exception as e:
-        logger.error(f"Wayback Machine Images unavailable for {domain}: {str(e)}")
         return []
+    except Exception as e:
+        logger.error(f"Wayback Machine snapshots unavailable for {domain}: {str(e)}")
+        return []
+
+def get_owasp_checks(domain: str) -> list:
+    """Perform passive checks for OWASP Top 10 2025 vulnerabilities."""
+    checks = []
+    
+    # Get necessary data
+    ssl_data = get_ssl_data(domain)
+    security_headers = get_security_headers(domain)
+    technologies = get_technologies(domain)
+    domain_status = get_domain_status(domain)
+    
+    # OWASP Top 10 2025 checks based on provided table
+    owasp_top10 = [
+        {
+            "name": "A01: Broken Access Control",
+            "status": "Unknown",
+            "details": "Cannot check passively"
+        },
+        {
+            "name": "A02: Injection",
+            "status": "Low Risk" if not any('php' in tech.lower() or 'sql' in tech.lower() for tech in technologies) else "Potential Risk",
+            "details": "Look for vulnerable technologies"
+        },
+        {
+            "name": "A03: Insecure Design",
+            "status": "Unknown",
+            "details": "Cannot check passively"
+        },
+        {
+            "name": "A04: Identification and Authentication Failures",
+            "status": "Low Risk" if domain_status.get('protocol') == 'https' else "High Risk",
+            "details": "Check if HTTPS used"
+        },
+        {
+            "name": "A05: Security Misconfiguration",
+            "status": "High Risk" if any(val == 'Not set' for val in security_headers.values() if val != 'error') else "Low Risk",
+            "details": "Missing security headers"
+        },
+        {
+            "name": "A06: Vulnerable and Outdated Components",
+            "status": "Low Risk" if not any('apache/2.2' in tech.lower() or 'nginx/1.14' in tech.lower() for tech in technologies) else "Potential Risk",
+            "details": "Check server headers for old versions"
+        },
+        {
+            "name": "A07: Cryptographic Failures",
+            "status": "Low Risk" if ssl_data.get('valid', False) else "High Risk",
+            "details": "Invalid or expired SSL"
+        },
+        {
+            "name": "A08: Software and Data Integrity Failures",
+            "status": "Unknown",
+            "details": "Cannot check passively"
+        },
+        {
+            "name": "A09: Server-Side Request Forgery",
+            "status": "Unknown",
+            "details": "Cannot check passively"
+        },
+        {
+            "name": "A10: Security Logging and Monitoring Failures",
+            "status": "Unknown",
+            "details": "Cannot check passively"
+        }
+    ]
+    
+    for item in owasp_top10:
+        checks.append({
+            'name': item['name'],
+            'status': item['status'],
+            'details': item['details']
+        })
+    
+    return checks
 
 def get_recon_data(domain: str) -> dict:
     """Combine all reconnaissance data."""
@@ -500,7 +603,8 @@ def get_recon_data(domain: str) -> dict:
         'emails': get_associated_emails(domain),
         'technologies': get_technologies(domain),
         'security_headers': get_security_headers(domain),
-        'wayback_images': get_wayback_images(domain)
+        'wayback_snapshots': get_wayback_snapshots(domain),
+        'owasp_checks': get_owasp_checks(domain)
     }
     
     # Add a random pro-tip

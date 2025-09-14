@@ -100,7 +100,7 @@
         }
 
         .hero h1 {
-            font-size: 48px;
+            font-size: clamp(32px, 5vw, 48px);
             font-weight: bold;
             margin-bottom: 16px;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
@@ -110,7 +110,7 @@
         }
 
         .hero p {
-            font-size: 20px;
+            font-size: clamp(16px, 3vw, 20px);
             opacity: 0.8;
             margin-bottom: 40px;
         }
@@ -121,10 +121,12 @@
             gap: 16px;
             max-width: 600px;
             margin: 0 auto 40px;
+            flex-wrap: wrap;
         }
 
         .search-input {
             flex: 1;
+            min-width: 250px;
             padding: 16px 20px;
             border: 2px solid #e5e7eb;
             border-radius: 12px;
@@ -157,6 +159,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
 
         .search-btn:hover {
@@ -193,11 +196,12 @@
 
         .progress-bar {
             width: 100%;
+            max-width: 400px;
             height: 8px;
             background: #e5e7eb;
             border-radius: 4px;
             overflow: hidden;
-            margin: 20px 0;
+            margin: 20px auto;
         }
 
         .progress-fill {
@@ -214,13 +218,15 @@
 
         .result-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
             padding: 20px;
             background: var(--light-card);
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .dark-theme .result-header {
@@ -336,6 +342,8 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 16px;
+            overflow-x: auto;
+            display: block;
         }
 
         .data-table th,
@@ -343,6 +351,7 @@
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
+            min-width: 100px;
         }
 
         .dark-theme .data-table th,
@@ -382,13 +391,33 @@
         }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            .card-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
         @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
             .hero h1 {
-                font-size: 36px;
+                font-size: 32px;
             }
 
             .search-form {
                 flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input {
+                min-width: auto;
             }
 
             .result-header {
@@ -399,6 +428,30 @@
 
             .card-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .data-table {
+                font-size: 14px;
+            }
+
+            .earth-container {
+                height: 300px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px 4px;
+                font-size: 12px;
             }
         }
 
@@ -480,7 +533,7 @@
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2024 Domain Reconnaissance Tool. Built with Python & Flask.</p>
+            <p>&copy; 2025 Domain Reconnaissance Tool. Built with Python & Flask.</p>
             <p>Professional domain analysis and threat intelligence platform</p>
         </div>
     </footer>
@@ -620,10 +673,14 @@
                 ${createDnsCard(recon.dns)}
                 ${createSslCard(recon.ssl)}
                 ${createThreatCard(recon.virustotal)}
+                ${createTracerouteCard(recon.traceroute)}
+                ${createReverseIpCard(recon.reverse_ip)}
                 ${createSubdomainsCard(recon.subdomains)}
+                ${createWaybackCard(recon.wayback_snapshots)}
                 ${createPortsCard(recon.open_ports)}
                 ${createTechnologiesCard(recon.technologies)}
                 ${createSecurityHeadersCard(recon.security_headers)}
+                ${createOwaspCard(recon.owasp_checks)}
                 ${createProTipCard(recon.pro_tip)}
             `;
 
@@ -823,6 +880,76 @@
             `;
         }
 
+        function createTracerouteCard(traceroute) {
+            if (traceroute.error || !traceroute.hops || traceroute.hops.length === 0) {
+                return `
+                    <div class="card">
+                        <div class="card-title">
+                            <i class="fas fa-route"></i>
+                            Traceroute
+                        </div>
+                        <p>Traceroute data unavailable: ${traceroute.error || 'No hops found'}</p>
+                    </div>
+                `;
+            }
+
+            const tracerouteTable = traceroute.hops.map(hop => 
+                `<tr><td>${hop}</td></tr>`
+            ).join('');
+
+            return `
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-route"></i>
+                        Traceroute (${traceroute.hops.length} hops)
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Hop</th></tr>
+                        </thead>
+                        <tbody>
+                            ${tracerouteTable}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function createReverseIpCard(reverse_ip) {
+            if (!reverse_ip || reverse_ip.length === 0) {
+                return `
+                    <div class="card">
+                        <div class="card-title">
+                            <i class="fas fa-server"></i>
+                            Reverse IP Lookup
+                        </div>
+                        <p>No domains found on the same IP</p>
+                    </div>
+                `;
+            }
+
+            const reverseIpTable = reverse_ip.map(domain => 
+                `<tr><td>${domain}</td></tr>`
+            ).join('');
+
+            return `
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-server"></i>
+                        Reverse IP Lookup (${reverse_ip.length} domains)
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Domain</th></tr>
+                        </thead>
+                        <tbody>
+                            ${reverseIpTable}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
         function createSubdomainsCard(subdomains) {
             if (!subdomains || subdomains.length === 0) {
                 return `
@@ -846,6 +973,41 @@
                         ${subdomains.slice(0, 20).map(sub => `<span class="tag">${sub}</span>`).join('')}
                         ${subdomains.length > 20 ? `<span class="tag">... and ${subdomains.length - 20} more</span>` : ''}
                     </div>
+                </div>
+            `;
+        }
+
+        function createWaybackCard(wayback) {
+            if (!wayback || wayback.length === 0) {
+                return `
+                    <div class="card">
+                        <div class="card-title">
+                            <i class="fas fa-clock"></i>
+                            Historical Snapshots (Wayback Machine)
+                        </div>
+                        <p>No historical snapshots found</p>
+                    </div>
+                `;
+            }
+
+            const waybackTable = wayback.slice(0, 5).map(snap => 
+                `<tr><td>${snap.timestamp}</td><td><a href="${snap.url}" target="_blank">${snap.url}</a></td></tr>`
+            ).join('');
+
+            return `
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-clock"></i>
+                        Historical Snapshots (${wayback.length} found)
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Timestamp</th><th>Snapshot URL</th></tr>
+                        </thead>
+                        <tbody>
+                            ${waybackTable}
+                        </tbody>
+                    </table>
                 </div>
             `;
         }
@@ -947,6 +1109,45 @@
                         </thead>
                         <tbody>
                             ${headersTable}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function createOwaspCard(checks) {
+            if (!checks || checks.length === 0) {
+                return `
+                    <div class="card">
+                        <div class="card-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            OWASP Top 10 Vulnerability Checks (2025)
+                        </div>
+                        <p>No OWASP checks performed</p>
+                    </div>
+                `;
+            }
+
+            const owaspTable = checks.map(check => 
+                `<tr>
+                    <td>${check.name}</td>
+                    <td><span class="tag ${check.status === 'High Risk' ? 'danger' : check.status === 'Potential Risk' ? 'warning' : check.status === 'Low Risk' ? 'success' : ''}">${check.status}</span></td>
+                    <td>${check.details}</td>
+                </tr>`
+            ).join('');
+
+            return `
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        OWASP Top 10 Vulnerability Checks (2025)
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Vulnerability</th><th>Status</th><th>Details</th></tr>
+                        </thead>
+                        <tbody>
+                            ${owaspTable}
                         </tbody>
                     </table>
                 </div>
