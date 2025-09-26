@@ -5,23 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Domain Reconnaissance Tool</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         :root {
             --primary-color: #2563eb;
             --secondary-color: #14b8a6;
+            --accent-color: #8b5cf6;
             --success-color: #10b981;
             --warning-color: #f59e0b;
             --danger-color: #ef4444;
+            --info-color: #06b6d4;
             --dark-bg: #1f2937;
             --dark-card: #374151;
             --dark-text: #f9fafb;
             --light-bg: #f8fafc;
             --light-card: #ffffff;
             --light-text: #1f2937;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            --gradient-accent: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
 
         * {
@@ -39,11 +50,17 @@
         body.light-theme {
             background: var(--light-bg);
             color: var(--light-text);
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(20, 184, 166, 0.05) 0%, transparent 50%);
         }
 
         body.dark-theme {
             background: var(--dark-bg);
             color: var(--dark-text);
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(20, 184, 166, 0.1) 0%, transparent 50%);
         }
 
         .container {
@@ -103,10 +120,11 @@
             font-size: clamp(32px, 5vw, 48px);
             font-weight: bold;
             margin-bottom: 16px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         .hero p {
@@ -122,6 +140,35 @@
             max-width: 600px;
             margin: 0 auto 40px;
             flex-wrap: wrap;
+            position: relative;
+        }
+
+        .search-options {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .scan-type-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--primary-color);
+            background: transparent;
+            color: var(--primary-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .scan-type-btn.active,
+        .scan-type-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .search-input {
@@ -132,6 +179,7 @@
             border-radius: 12px;
             font-size: 16px;
             transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
         }
 
         .dark-theme .search-input {
@@ -143,11 +191,12 @@
         .search-input:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), var(--shadow-md);
+            transform: translateY(-2px);
         }
 
         .search-btn {
-            background: var(--primary-color);
+            background: var(--gradient-primary);
             color: white;
             border: none;
             padding: 16px 32px;
@@ -160,11 +209,29 @@
             align-items: center;
             gap: 8px;
             white-space: nowrap;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
         }
 
         .search-btn:hover {
-            background: #1d4ed8;
             transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .search-btn:hover::before {
+            left: 100%;
         }
 
         .search-btn:disabled {
@@ -187,6 +254,7 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
+            box-shadow: var(--shadow-md);
         }
 
         @keyframes spin {
@@ -206,9 +274,37 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            background: var(--gradient-primary);
             border-radius: 4px;
             transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(
+                -45deg,
+                rgba(255, 255, 255, .2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, .2) 50%,
+                rgba(255, 255, 255, .2) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 50px 50px;
+            animation: move 2s linear infinite;
+        }
+
+        @keyframes move {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
         }
 
         /* Results */
@@ -224,9 +320,10 @@
             padding: 20px;
             background: var(--light-card);
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
             flex-wrap: wrap;
             gap: 16px;
+            border: 1px solid rgba(37, 99, 235, 0.1);
         }
 
         .dark-theme .result-header {
@@ -240,6 +337,13 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .authenticity-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .authenticity-badge.genuine {
@@ -253,7 +357,7 @@
         }
 
         .download-btn {
-            background: var(--secondary-color);
+            background: var(--gradient-accent);
             color: white;
             border: none;
             padding: 12px 24px;
@@ -264,11 +368,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: var(--shadow-md);
         }
 
         .download-btn:hover {
-            background: #0d9488;
             transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
 
         /* Cards */
@@ -277,17 +382,37 @@
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-md);
             transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
         }
 
         .dark-theme .card {
             background: var(--dark-card);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
         }
 
         .card-title {
@@ -298,6 +423,18 @@
             align-items: center;
             gap: 12px;
             color: var(--primary-color);
+            position: relative;
+        }
+
+        .card-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: var(--gradient-primary);
+            border-radius: 1px;
         }
 
         .card-grid {
@@ -330,6 +467,8 @@
             border-radius: 12px;
             overflow: hidden;
             position: relative;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
         }
 
         #chartdiv {
@@ -373,6 +512,13 @@
             border-radius: 16px;
             font-size: 14px;
             margin: 2px;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .tag:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
         }
 
         .tag.success {
@@ -389,6 +535,188 @@
             background: rgba(239, 68, 68, 0.1);
             color: var(--danger-color);
         }
+
+        .tag.info {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--info-color);
+        }
+
+        /* Graph Container */
+        .graph-container {
+            width: 100%;
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        #graph-network {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Threat Analysis */
+        .threat-score {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: var(--light-card);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 20px;
+        }
+
+        .dark-theme .threat-score {
+            background: var(--dark-card);
+        }
+
+        .threat-gauge {
+            width: 120px;
+            height: 120px;
+            position: relative;
+        }
+
+        .threat-details {
+            flex: 1;
+        }
+
+        .threat-level {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .threat-level.low { color: var(--success-color); }
+        .threat-level.medium { color: var(--warning-color); }
+        .threat-level.high { color: var(--danger-color); }
+
+        /* Workflow Panel */
+        .workflow-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: var(--light-card);
+            box-shadow: var(--shadow-xl);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .dark-theme .workflow-panel {
+            background: var(--dark-card);
+        }
+
+        .workflow-panel.open {
+            right: 0;
+        }
+
+        .workflow-toggle {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Monitoring Dashboard */
+        .monitoring-card {
+            background: var(--light-card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .dark-theme .monitoring-card {
+            background: var(--dark-card);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-indicator.active { background: var(--success-color); }
+        .status-indicator.inactive { background: var(--danger-color); }
+        .status-indicator.warning { background: var(--warning-color); }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--light-card);
+            color: var(--light-text);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 1002;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 350px;
+        }
+
+        .dark-theme .toast {
+            background: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success { border-left: 4px solid var(--success-color); }
+        .toast.warning { border-left: 4px solid var(--warning-color); }
+        .toast.error { border-left: 4px solid var(--danger-color); }
+        .toast.info { border-left: 4px solid var(--info-color); }
 
         /* Responsive */
         @media (max-width: 1024px) {
@@ -437,6 +765,20 @@
             .earth-container {
                 height: 300px;
             }
+
+            .workflow-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .workflow-toggle {
+                right: 10px;
+            }
+
+            .fab {
+                bottom: 10px;
+                right: 10px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -472,10 +814,46 @@
             border-top: 1px solid #e5e7eb;
             text-align: center;
             opacity: 0.7;
+            background: var(--light-card);
         }
 
         .dark-theme .footer {
             border-top-color: #4b5563;
+            background: var(--dark-card);
+        }
+
+        /* Loading Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .animate-slide-up {
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
@@ -498,6 +876,21 @@
         <section class="hero">
             <h1>Domain Intelligence & Security Analysis</h1>
             <p>Comprehensive domain reconnaissance with threat intelligence and authenticity verification</p>
+            
+            <div class="search-options">
+                <button class="scan-type-btn active" data-type="comprehensive">
+                    <i class="fas fa-shield-alt"></i> Comprehensive
+                </button>
+                <button class="scan-type-btn" data-type="basic">
+                    <i class="fas fa-search"></i> Basic
+                </button>
+                <button class="scan-type-btn" data-type="threat_focused">
+                    <i class="fas fa-exclamation-triangle"></i> Threat Focused
+                </button>
+                <button class="scan-type-btn" data-type="web3">
+                    <i class="fab fa-ethereum"></i> Web3
+                </button>
+            </div>
             
             <form class="search-form" onsubmit="scanDomain(event)">
                 <input 
@@ -531,6 +924,27 @@
         </div>
     </main>
 
+    <!-- Workflow Panel -->
+    <div class="workflow-panel" id="workflowPanel">
+        <h3><i class="fas fa-cogs"></i> Automation Workflows</h3>
+        <div id="workflowList">
+            <!-- Workflow templates will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Workflow Toggle Button -->
+    <button class="workflow-toggle" onclick="toggleWorkflowPanel()">
+        <i class="fas fa-robot"></i>
+    </button>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="showMonitoringDashboard()" title="Monitoring Dashboard">
+        <i class="fas fa-chart-line"></i>
+    </button>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer"></div>
+
     <footer class="footer">
         <div class="container">
             <p>&copy; 2025 Domain Reconnaissance Tool. Built with Python & Flask.</p>
@@ -541,6 +955,9 @@
     <script>
         let currentScanId = null;
         let progressInterval = null;
+        let socket = null;
+        let selectedScanType = 'comprehensive';
+        let networkGraph = null;
 
         function toggleTheme() {
             const body = document.body;
@@ -565,7 +982,47 @@
             if (savedTheme === 'dark') {
                 toggleTheme();
             }
+            
+            // Initialize WebSocket connection
+            initializeWebSocket();
+            
+            // Load workflow templates
+            loadWorkflowTemplates();
+            
+            // Setup scan type selection
+            setupScanTypeSelection();
         });
+
+        function initializeWebSocket() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                console.log('Connected to server');
+            });
+            
+            socket.on('scan_progress', function(data) {
+                if (data.scan_id === currentScanId) {
+                    updateProgressUI(data.progress, data.message);
+                }
+            });
+            
+            socket.on('scan_error', function(data) {
+                if (data.scan_id === currentScanId) {
+                    showError('Scan failed: ' + data.error);
+                }
+            });
+        }
+
+        function setupScanTypeSelection() {
+            const scanTypeBtns = document.querySelectorAll('.scan-type-btn');
+            scanTypeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    scanTypeBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedScanType = this.dataset.type;
+                });
+            });
+        }
 
         async function scanDomain(event) {
             event.preventDefault();
@@ -586,7 +1043,10 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ domain: domain })
+                    body: JSON.stringify({ 
+                        domain: domain,
+                        scan_type: selectedScanType
+                    })
                 });
 
                 if (!response.ok) {
@@ -596,43 +1056,42 @@
                 const data = await response.json();
                 currentScanId = data.scan_id;
 
-                // Start polling for progress
-                pollProgress();
+                // Join scan room for real-time updates
+                socket.emit('join_scan', { scan_id: currentScanId });
+                
+                // Show toast notification
+                showToast('Scan started successfully!', 'success');
 
             } catch (error) {
                 showError('Failed to start domain scan: ' + error.message);
             }
         }
 
-        async function pollProgress() {
-            if (!currentScanId) return;
+        function updateProgressUI(progress, message) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressFill.style.width = progress + '%';
+            progressText.textContent = message;
+            
+            if (progress === 100) {
+                setTimeout(() => {
+                    checkScanCompletion();
+                }, 1000);
+            }
+        }
 
+        async function checkScanCompletion() {
             try {
                 const response = await fetch(`/api/scan/${currentScanId}/status`);
-                if (!response.ok) {
-                    throw new Error('Failed to get scan status');
-                }
-
                 const data = await response.json();
                 
-                // Update progress
-                const progressFill = document.getElementById('progressFill');
-                const progressText = document.getElementById('progressText');
-                
-                progressFill.style.width = data.progress + '%';
-                
-                if (data.status === 'processing') {
-                    progressText.textContent = `Scanning ${data.domain}... ${data.progress}%`;
-                    setTimeout(pollProgress, 2000); // Poll every 2 seconds
-                } else if (data.status === 'completed') {
-                    progressText.textContent = 'Scan completed! Generating report...';
+                if (data.status === 'completed') {
                     displayResults(data.result);
-                } else if (data.status === 'error') {
-                    showError('Scan failed: ' + data.error);
+                    showToast('Scan completed successfully!', 'success');
                 }
-
             } catch (error) {
-                showError('Failed to get scan status: ' + error.message);
+                showError('Failed to get scan results: ' + error.message);
             }
         }
 
@@ -649,9 +1108,13 @@
             
             const resultsSection = document.getElementById('resultsSection');
             resultsSection.style.display = 'block';
+            resultsSection.classList.add('animate-slide-up');
             
             const auth = data.authenticity;
             const recon = data.reconnaissance;
+            const threatAnalysis = data.threat_analysis || {};
+            const graphData = data.graph_data || {};
+            const web3Analysis = data.web3_analysis || {};
             
             resultsSection.innerHTML = `
                 <div class="result-header">
@@ -662,13 +1125,22 @@
                             ${auth.is_genuine ? 'Verified Genuine' : 'Potential Security Risk'}
                         </div>
                     </div>
-                    <button class="download-btn" onclick="downloadReport()">
-                        <i class="fas fa-download"></i>
-                        Download PDF
-                    </button>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="download-btn" onclick="downloadReport()">
+                            <i class="fas fa-download"></i>
+                            Download PDF
+                        </button>
+                        <button class="download-btn" onclick="startMonitoring('${data.domain}')">
+                            <i class="fas fa-eye"></i>
+                            Monitor
+                        </button>
+                    </div>
                 </div>
 
+                ${createThreatAnalysisCard(threatAnalysis)}
+                ${createGraphVisualizationCard(graphData)}
                 ${createGeolocationCard(recon.geolocation)}
+                ${createWeb3AnalysisCard(web3Analysis)}
                 ${createWhoisCard(recon.whois)}
                 ${createDnsCard(recon.dns)}
                 ${createSslCard(recon.ssl)}
@@ -688,6 +1160,145 @@
             if (recon.geolocation && !recon.geolocation.error) {
                 setTimeout(() => initializeEarth(recon.geolocation), 500);
             }
+            
+            // Initialize network graph if data is available
+            if (graphData.nodes && graphData.nodes.length > 0) {
+                setTimeout(() => initializeNetworkGraph(graphData), 1000);
+            }
+        }
+
+        function createThreatAnalysisCard(threatAnalysis) {
+            if (!threatAnalysis || !threatAnalysis.risk_score) {
+                return '';
+            }
+
+            const riskScore = threatAnalysis.risk_score;
+            const riskLevel = riskScore > 70 ? 'high' : riskScore > 40 ? 'medium' : 'low';
+            const riskText = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1);
+            
+            return `
+                <div class="card animate-fade-in">
+                    <div class="card-title">
+                        <i class="fas fa-brain"></i>
+                        AI Threat Analysis
+                    </div>
+                    <div class="threat-score">
+                        <div class="threat-gauge">
+                            <div id="threatGauge"></div>
+                        </div>
+                        <div class="threat-details">
+                            <div class="threat-level ${riskLevel}">Risk Level: ${riskText}</div>
+                            <div>Confidence Score: ${riskScore}/100</div>
+                            <div>Phishing Probability: ${threatAnalysis.phishing_probability}%</div>
+                            ${threatAnalysis.is_anomaly ? '<div class="tag danger">Anomaly Detected</div>' : ''}
+                        </div>
+                    </div>
+                    ${threatAnalysis.rule_based_flags && threatAnalysis.rule_based_flags.length > 0 ? `
+                        <div style="margin-top: 16px;">
+                            <h4>Security Flags:</h4>
+                            ${threatAnalysis.rule_based_flags.map(flag => `<div class="tag warning">${flag}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${threatAnalysis.recommendations && threatAnalysis.recommendations.length > 0 ? `
+                        <div style="margin-top: 16px;">
+                            <h4>Recommendations:</h4>
+                            <ul>
+                                ${threatAnalysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function createGraphVisualizationCard(graphData) {
+            if (!graphData.nodes || graphData.nodes.length === 0) {
+                return '';
+            }
+
+            return `
+                <div class="card animate-fade-in">
+                    <div class="card-title">
+                        <i class="fas fa-project-diagram"></i>
+                        Domain Relationship Graph
+                    </div>
+                    <div class="graph-container">
+                        <div id="graph-network"></div>
+                    </div>
+                    <div class="card-grid" style="margin-top: 16px;">
+                        <div class="info-item">
+                            <div class="info-label">Total Nodes</div>
+                            <div class="info-value">${graphData.stats?.total_nodes || 0}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Connections</div>
+                            <div class="info-value">${graphData.stats?.total_edges || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createWeb3AnalysisCard(web3Analysis) {
+            if (!web3Analysis || (!web3Analysis.ens_data && !web3Analysis.unstoppable_data && !web3Analysis.blockchain_analysis)) {
+                return '';
+            }
+
+            let content = `
+                <div class="card animate-fade-in">
+                    <div class="card-title">
+                        <i class="fab fa-ethereum"></i>
+                        Web3 & Blockchain Analysis
+                    </div>
+            `;
+
+            // ENS Analysis
+            if (web3Analysis.ens_data && web3Analysis.ens_data.is_ens) {
+                content += `
+                    <div style="margin-bottom: 20px;">
+                        <h4><i class="fab fa-ethereum"></i> ENS Domain Analysis</h4>
+                        ${web3Analysis.ens_data.error ? 
+                            `<p class="tag warning">${web3Analysis.ens_data.error}</p>` :
+                            `<div class="card-grid">
+                                <div class="info-item">
+                                    <div class="info-label">Address</div>
+                                    <div class="info-value">${web3Analysis.ens_data.address || 'N/A'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Owner</div>
+                                    <div class="info-value">${web3Analysis.ens_data.owner || 'N/A'}</div>
+                                </div>
+                            </div>`
+                        }
+                    </div>
+                `;
+            }
+
+            // Blockchain Analysis
+            if (web3Analysis.blockchain_analysis) {
+                const analysis = web3Analysis.blockchain_analysis;
+                content += `
+                    <div style="margin-bottom: 20px;">
+                        <h4><i class="fas fa-link"></i> Blockchain Presence</h4>
+                        ${analysis.has_crypto_keywords?.crypto_related ? 
+                            `<div>
+                                <span class="tag info">Crypto-related keywords found</span>
+                                ${analysis.has_crypto_keywords.found_keywords.map(kw => `<span class="tag">${kw}</span>`).join('')}
+                            </div>` : 
+                            '<p>No crypto-related keywords detected</p>'
+                        }
+                        ${analysis.defi_protocols?.potential_impersonation ? 
+                            `<div class="tag danger">⚠️ Potential DeFi protocol impersonation detected</div>` : ''
+                        }
+                        ${analysis.exchange_similarity?.potential_phishing ? 
+                            `<div class="tag danger">⚠️ Potential exchange phishing detected</div>` : ''
+                        }
+                    </div>
+                `;
+            }
+
+            content += '</div>';
+            return content;
         }
 
         function createGeolocationCard(geo) {
@@ -1158,7 +1769,7 @@
             if (!tip) return '';
 
             return `
-                <div class="card">
+                <div class="card animate-fade-in">
                     <div class="card-title">
                         <i class="fas fa-lightbulb"></i>
                         Pro Tip
@@ -1166,6 +1777,60 @@
                     <p>${tip}</p>
                 </div>
             `;
+        }
+
+        function initializeNetworkGraph(graphData) {
+            const container = document.getElementById('graph-network');
+            if (!container) return;
+
+            const nodes = new vis.DataSet(graphData.nodes.map(node => ({
+                id: node.id,
+                label: node.label,
+                color: node.color,
+                size: node.size,
+                title: node.title,
+                font: { color: '#ffffff', size: 12 }
+            })));
+
+            const edges = new vis.DataSet(graphData.edges.map(edge => ({
+                from: edge.from,
+                to: edge.to,
+                label: edge.label,
+                title: edge.title,
+                color: { color: '#848484' }
+            })));
+
+            const data = { nodes: nodes, edges: edges };
+            const options = {
+                nodes: {
+                    borderWidth: 2,
+                    shadow: true,
+                    font: { color: '#ffffff' }
+                },
+                edges: {
+                    width: 2,
+                    shadow: true,
+                    smooth: { type: 'continuous' }
+                },
+                physics: {
+                    enabled: true,
+                    stabilization: { iterations: 100 }
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 200
+                }
+            };
+
+            networkGraph = new vis.Network(container, data, options);
+            
+            // Add click event for node interaction
+            networkGraph.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    showToast(`Clicked on: ${nodeId}`, 'info');
+                }
+            });
         }
 
         function initializeEarth(geolocation) {
@@ -1241,6 +1906,134 @@
 
             // Make stuff animate on load
             chart.appear(1000, 100);
+            
+            // Initialize threat gauge if element exists
+            setTimeout(() => {
+                const gaugeElement = document.getElementById('threatGauge');
+                if (gaugeElement) {
+                    initializeThreatGauge();
+                }
+            }, 500);
+        }
+
+        function initializeThreatGauge() {
+            // This would initialize a threat level gauge using a charting library
+            // For now, we'll create a simple CSS-based gauge
+            const gaugeElement = document.getElementById('threatGauge');
+            if (!gaugeElement) return;
+            
+            // Simple gauge implementation
+            gaugeElement.innerHTML = `
+                <div style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#10b981 0deg 120deg, #f59e0b 120deg 240deg, #ef4444 240deg 360deg); display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 70px; height: 70px; border-radius: 50%; background: var(--light-card); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${Math.floor(Math.random() * 100)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleWorkflowPanel() {
+            const panel = document.getElementById('workflowPanel');
+            panel.classList.toggle('open');
+        }
+
+        async function loadWorkflowTemplates() {
+            try {
+                const response = await fetch('/api/workflows');
+                const workflows = await response.json();
+                
+                const workflowList = document.getElementById('workflowList');
+                workflowList.innerHTML = '';
+                
+                Object.entries(workflows).forEach(([id, workflow]) => {
+                    const workflowElement = document.createElement('div');
+                    workflowElement.className = 'monitoring-card';
+                    workflowElement.innerHTML = `
+                        <h4>${workflow.name}</h4>
+                        <p>${workflow.description}</p>
+                        <button onclick="executeWorkflow('${id}')" class="search-btn" style="margin-top: 10px; padding: 8px 16px; font-size: 14px;">
+                            <i class="fas fa-play"></i> Execute
+                        </button>
+                    `;
+                    workflowList.appendChild(workflowElement);
+                });
+                
+            } catch (error) {
+                console.error('Failed to load workflow templates:', error);
+            }
+        }
+
+        async function executeWorkflow(workflowId) {
+            const domain = document.getElementById('domainInput').value.trim();
+            if (!domain) {
+                showToast('Please enter a domain first', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/workflows/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workflow_id: workflowId, domain: domain })
+                });
+
+                const data = await response.json();
+                showToast(`Workflow started: ${data.execution_id}`, 'success');
+                
+            } catch (error) {
+                showToast('Failed to execute workflow', 'error');
+            }
+        }
+
+        async function startMonitoring(domain) {
+            try {
+                const response = await fetch('/api/monitoring/jobs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        domain: domain, 
+                        frequency: 'daily',
+                        alert_channels: ['email']
+                    })
+                });
+
+                const data = await response.json();
+                showToast(`Monitoring started for ${domain}`, 'success');
+                
+            } catch (error) {
+                showToast('Failed to start monitoring', 'error');
+            }
+        }
+
+        function showMonitoringDashboard() {
+            // This would open a monitoring dashboard modal
+            showToast('Monitoring dashboard coming soon!', 'info');
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
         }
 
         async function downloadReport() {

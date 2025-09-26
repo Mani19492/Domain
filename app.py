@@ -1,16 +1,24 @@
 import os
 import json
 import logging
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, session
+from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 from recon import get_recon_data
 from auth_check import check_authenticity, get_official_link
 from pdf_generator import generate_pdf_report
+from ai_threat_predictor import threat_predictor
+from graph_mapper import graph_mapper
+from web3_scanner import web3_scanner
+from workflow_automation import workflow_automation
+from monitoring_system import monitoring_system
 import tempfile
 import uuid
 import re
 from functools import wraps
 from datetime import datetime, timedelta
+import threading
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -24,9 +32,11 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Store scan results temporarily (in production, use Redis or database)
 scan_results = {}
+workflow_executions = {}
 
 # Simple rate limiting: track requests per IP
 request_times = {}
@@ -70,6 +80,7 @@ def scan_domain():
     try:
         data = request.get_json()
         domain = data.get('domain', '').strip()
+        scan_type = data.get('scan_type', 'comprehensive')  # comprehensive, basic, threat_focused, web3
         
         if not domain:
             return jsonify({'error': 'Domain is required'}), 400
@@ -84,45 +95,13 @@ def scan_domain():
         scan_results[scan_id] = {
             'status': 'processing',
             'domain': domain,
+            'scan_type': scan_type,
             'progress': 0
         }
         
         # Start background processing (in production, use Celery)
-        try:
-            # Update progress
-            scan_results[scan_id]['progress'] = 10
-            
-            # Get authenticity check
-            auth_result = check_authenticity(f'https://{domain}')
-            scan_results[scan_id]['progress'] = 30
-            
-            # Get reconnaissance data
-            recon_data = get_recon_data(domain)
-            scan_results[scan_id]['progress'] = 80
-            
-            # Combine results
-            result = {
-                'domain': domain,
-                'authenticity': auth_result,
-                'reconnaissance': recon_data,
-                'official_link': get_official_link(domain) if not auth_result['is_genuine'] else None
-            }
-            
-            scan_results[scan_id] = {
-                'status': 'completed',
-                'domain': domain,
-                'progress': 100,
-                'result': result
-            }
-            
-        except Exception as e:
-            logger.error(f"Error scanning domain {domain}: {str(e)}")
-            scan_results[scan_id] = {
-                'status': 'error',
-                'domain': domain,
-                'progress': 0,
-                'error': str(e)
-            }
+        # Start background scan
+        threading.Thread(target=perform_background_scan, args=(scan_id, domain, scan_type)).start()
         
         return jsonify({'scan_id': scan_id})
         
@@ -130,6 +109,75 @@ def scan_domain():
         logger.error(f"Error in scan endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+def perform_background_scan(scan_id: str, domain: str, scan_type: str):
+    """Perform background scanning with real-time updates."""
+    try:
+        # Update progress
+        update_scan_progress(scan_id, 10, "Starting authenticity check...")
+        
+        # Get authenticity check
+        auth_result = check_authenticity(f'https://{domain}')
+        update_scan_progress(scan_id, 25, "Performing reconnaissance...")
+        
+        # Get reconnaissance data
+        recon_data = get_recon_data(domain)
+        update_scan_progress(scan_id, 50, "Analyzing threats with AI...")
+        
+        # AI threat prediction
+        threat_analysis = threat_predictor.predict_threat_level(recon_data)
+        update_scan_progress(scan_id, 65, "Creating relationship graph...")
+        
+        # Graph analysis
+        graph_data = graph_mapper.create_domain_graph(recon_data)
+        
+        result = {
+            'domain': domain,
+            'authenticity': auth_result,
+            'reconnaissance': recon_data,
+            'threat_analysis': threat_analysis,
+            'graph_data': graph_data,
+            'official_link': get_official_link(domain) if not auth_result['is_genuine'] else None
+        }
+        
+        # Additional scans based on type
+        if scan_type in ['comprehensive', 'web3']:
+            update_scan_progress(scan_id, 80, "Scanning Web3 domains...")
+            result['web3_analysis'] = web3_scanner.scan_web3_domain(domain)
+        
+        update_scan_progress(scan_id, 95, "Finalizing results...")
+        
+        scan_results[scan_id] = {
+            'status': 'completed',
+            'domain': domain,
+            'scan_type': scan_type,
+            'progress': 100,
+            'result': result
+        }
+        
+        update_scan_progress(scan_id, 100, "Scan completed!")
+        
+    except Exception as e:
+        logger.error(f"Error scanning domain {domain}: {str(e)}")
+        scan_results[scan_id] = {
+            'status': 'error',
+            'domain': domain,
+            'progress': 0,
+            'error': str(e)
+        }
+        socketio.emit('scan_error', {'scan_id': scan_id, 'error': str(e)})
+
+def update_scan_progress(scan_id: str, progress: int, message: str):
+    """Update scan progress and emit to frontend."""
+    if scan_id in scan_results:
+        scan_results[scan_id]['progress'] = progress
+        scan_results[scan_id]['status_message'] = message
+        
+        # Emit progress update via WebSocket
+        socketio.emit('scan_progress', {
+            'scan_id': scan_id,
+            'progress': progress,
+            'message': message
+        })
 @app.route('/api/scan/<scan_id>/status')
 def get_scan_status(scan_id):
     """Get scan status."""
@@ -162,5 +210,95 @@ def download_report(scan_id):
         logger.error(f"Error generating PDF: {str(e)}")
         return jsonify({'error': 'Failed to generate PDF'}), 500
 
+@app.route('/api/workflows')
+def get_workflows():
+    """Get available workflow templates."""
+    return jsonify(workflow_automation.get_available_workflows())
+
+@app.route('/api/workflows/execute', methods=['POST'])
+@rate_limit()
+def execute_workflow():
+    """Execute a workflow."""
+    try:
+        data = request.get_json()
+        workflow_id = data.get('workflow_id')
+        domain = data.get('domain')
+        params = data.get('params', {})
+        
+        if not workflow_id or not domain:
+            return jsonify({'error': 'Workflow ID and domain are required'}), 400
+        
+        execution_id = workflow_automation.execute_workflow(workflow_id, domain, params)
+        return jsonify({'execution_id': execution_id})
+        
+    except Exception as e:
+        logger.error(f"Error executing workflow: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/workflows/<execution_id>/status')
+def get_workflow_status(execution_id):
+    """Get workflow execution status."""
+    try:
+        status = workflow_automation.get_workflow_status(execution_id)
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/monitoring/jobs', methods=['GET'])
+def get_monitoring_jobs():
+    """Get all monitoring jobs."""
+    try:
+        jobs = monitoring_system.get_monitoring_jobs()
+        return jsonify(jobs)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/monitoring/jobs', methods=['POST'])
+@rate_limit()
+def create_monitoring_job():
+    """Create a new monitoring job."""
+    try:
+        data = request.get_json()
+        domain = data.get('domain')
+        frequency = data.get('frequency', 'daily')
+        alert_channels = data.get('alert_channels', ['email'])
+        
+        if not domain:
+            return jsonify({'error': 'Domain is required'}), 400
+        
+        job_id = monitoring_system.create_monitoring_job(domain, frequency, alert_channels)
+        return jsonify({'job_id': job_id})
+        
+    except Exception as e:
+        logger.error(f"Error creating monitoring job: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/monitoring/jobs/<job_id>/history')
+def get_job_history(job_id):
+    """Get monitoring job history."""
+    try:
+        history = monitoring_system.get_job_history(job_id)
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# WebSocket events
+@socketio.on('connect')
+def handle_connect():
+    """Handle WebSocket connection."""
+    logger.info(f"Client connected: {request.sid}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle WebSocket disconnection."""
+    logger.info(f"Client disconnected: {request.sid}")
+
+@socketio.on('join_scan')
+def handle_join_scan(data):
+    """Join a scan room for real-time updates."""
+    scan_id = data.get('scan_id')
+    if scan_id:
+        session['scan_id'] = scan_id
+        logger.info(f"Client {request.sid} joined scan {scan_id}")
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)  # debug=False for production
+    socketio.run(app, debug=False, host='0.0.0.0', port=5000)  # debug=False for production
