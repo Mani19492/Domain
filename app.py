@@ -80,7 +80,7 @@ def scan_domain():
     try:
         data = request.get_json()
         domain = data.get('domain', '').strip()
-        scan_type = data.get('scan_type', 'comprehensive')  # comprehensive, basic, threat_focused, web3
+        scan_type = 'comprehensive'  # Always comprehensive - execute everything
         
         if not domain:
             return jsonify({'error': 'Domain is required'}), 400
@@ -113,22 +113,31 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
     """Perform background scanning with real-time updates."""
     try:
         # Update progress
-        update_scan_progress(scan_id, 10, "Starting authenticity check...")
+        update_scan_progress(scan_id, 5, "Starting comprehensive analysis...")
         
         # Get authenticity check
         auth_result = check_authenticity(f'https://{domain}')
-        update_scan_progress(scan_id, 25, "Performing reconnaissance...")
+        update_scan_progress(scan_id, 15, "Performing reconnaissance...")
         
         # Get reconnaissance data
         recon_data = get_recon_data(domain)
-        update_scan_progress(scan_id, 50, "Analyzing threats with AI...")
+        update_scan_progress(scan_id, 35, "Analyzing threats with AI...")
         
         # AI threat prediction
         threat_analysis = threat_predictor.predict_threat_level(recon_data)
-        update_scan_progress(scan_id, 65, "Creating relationship graph...")
+        update_scan_progress(scan_id, 50, "Creating relationship graph...")
         
         # Graph analysis
         graph_data = graph_mapper.create_domain_graph(recon_data)
+        update_scan_progress(scan_id, 65, "Scanning Web3 domains...")
+        
+        # Always perform Web3 analysis
+        web3_analysis = web3_scanner.scan_web3_domain(domain)
+        update_scan_progress(scan_id, 75, "Running workflow automation...")
+        
+        # Execute all workflows automatically
+        workflow_results = execute_all_workflows(domain, recon_data, threat_analysis)
+        update_scan_progress(scan_id, 90, "Finalizing comprehensive report...")
         
         result = {
             'domain': domain,
@@ -136,15 +145,12 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
             'reconnaissance': recon_data,
             'threat_analysis': threat_analysis,
             'graph_data': graph_data,
+            'web3_analysis': web3_analysis,
+            'workflow_results': workflow_results,
             'official_link': get_official_link(domain) if not auth_result['is_genuine'] else None
         }
         
-        # Additional scans based on type
-        if scan_type in ['comprehensive', 'web3']:
-            update_scan_progress(scan_id, 80, "Scanning Web3 domains...")
-            result['web3_analysis'] = web3_scanner.scan_web3_domain(domain)
-        
-        update_scan_progress(scan_id, 95, "Finalizing results...")
+        update_scan_progress(scan_id, 95, "Generating comprehensive report...")
         
         scan_results[scan_id] = {
             'status': 'completed',
@@ -154,7 +160,7 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
             'result': result
         }
         
-        update_scan_progress(scan_id, 100, "Scan completed!")
+        update_scan_progress(scan_id, 100, "Comprehensive analysis completed!")
         
     except Exception as e:
         logger.error(f"Error scanning domain {domain}: {str(e)}")
@@ -165,6 +171,57 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
             'error': str(e)
         }
         socketio.emit('scan_error', {'scan_id': scan_id, 'error': str(e)})
+
+def execute_all_workflows(domain: str, recon_data: dict, threat_analysis: dict) -> dict:
+    """Execute all workflows automatically."""
+    try:
+        results = {}
+        
+        # Comprehensive Security Scan (already done above)
+        results['comprehensive'] = {
+            'status': 'completed',
+            'description': 'Full domain reconnaissance with threat analysis'
+        }
+        
+        # Threat Hunter Workflow
+        results['threat_hunter'] = {
+            'status': 'completed',
+            'description': 'Focused threat detection and analysis',
+            'high_risk_indicators': threat_analysis.get('rule_based_flags', []),
+            'risk_score': threat_analysis.get('risk_score', 0)
+        }
+        
+        # Compliance Audit
+        sec_headers = recon_data.get('security_headers', {})
+        owasp_checks = recon_data.get('owasp_checks', [])
+        
+        compliance_score = 100
+        compliance_issues = []
+        
+        # Check security headers
+        critical_headers = ['Content-Security-Policy', 'X-Frame-Options', 'Strict-Transport-Security']
+        for header in critical_headers:
+            if sec_headers.get(header) == 'Not set':
+                compliance_score -= 15
+                compliance_issues.append(f"Missing {header}")
+        
+        # Check OWASP issues
+        high_risk_owasp = [check for check in owasp_checks if check.get('status') == 'High Risk']
+        compliance_score -= len(high_risk_owasp) * 10
+        
+        results['compliance_audit'] = {
+            'status': 'completed',
+            'description': 'Security compliance and header analysis',
+            'compliance_score': max(0, compliance_score),
+            'issues': compliance_issues,
+            'owasp_high_risk': len(high_risk_owasp)
+        }
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error executing workflows: {str(e)}")
+        return {'error': str(e)}
 
 def update_scan_progress(scan_id: str, progress: int, message: str):
     """Update scan progress and emit to frontend."""
@@ -280,6 +337,33 @@ def get_job_history(job_id):
         history = monitoring_system.get_job_history(job_id)
         return jsonify(history)
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/monitoring/public')
+def get_public_monitoring():
+    """Get public monitoring list."""
+    try:
+        jobs = monitoring_system.get_public_monitoring_jobs()
+        return jsonify(jobs)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/monitoring/public', methods=['POST'])
+@rate_limit()
+def add_public_monitoring():
+    """Add domain to public monitoring."""
+    try:
+        data = request.get_json()
+        domain = data.get('domain')
+        
+        if not domain:
+            return jsonify({'error': 'Domain is required'}), 400
+        
+        job_id = monitoring_system.add_public_monitoring(domain)
+        return jsonify({'job_id': job_id})
+        
+    except Exception as e:
+        logger.error(f"Error adding public monitoring: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # WebSocket events

@@ -36,12 +36,18 @@ class ThreatPredictor:
         # WHOIS features
         whois = domain_data.get('whois', {})
         created_date = whois.get('created', 'N/A')
-        if created_date != 'N/A':
+        if created_date != 'N/A' and created_date and str(created_date).strip():
             try:
-                created = datetime.strptime(created_date.split('T')[0], '%Y-%m-%d')
+                # Handle various date formats
+                date_str = str(created_date).split('T')[0].strip()
+                if len(date_str) >= 10:
+                    created = datetime.strptime(date_str[:10], '%Y-%m-%d')
+                else:
+                    # Try alternative format
+                    created = datetime.strptime(date_str, '%Y-%m-%d')
                 days_old = (datetime.now() - created).days
                 features.append(days_old)
-            except:
+            except (ValueError, TypeError, AttributeError):
                 features.append(0)
         else:
             features.append(0)
@@ -58,9 +64,9 @@ class ThreatPredictor:
         
         # Threat intelligence features
         vt = domain_data.get('virustotal', {})
-        features.append(vt.get('malicious', 0))
-        features.append(vt.get('suspicious', 0))
-        features.append(vt.get('reputation', 0))
+        features.append(int(vt.get('malicious', 0)) if str(vt.get('malicious', 0)).isdigit() else 0)
+        features.append(int(vt.get('suspicious', 0)) if str(vt.get('suspicious', 0)).isdigit() else 0)
+        features.append(int(vt.get('reputation', 0)) if str(vt.get('reputation', 0)).replace('-', '').isdigit() else 0)
         
         # Subdomain features
         subdomains = domain_data.get('subdomains', [])
@@ -74,7 +80,7 @@ class ThreatPredictor:
         
         # Security headers
         sec_headers = domain_data.get('security_headers', {})
-        missing_headers = sum(1 for v in sec_headers.values() if v == 'Not set')
+        missing_headers = sum(1 for v in sec_headers.values() if str(v) == 'Not set')
         features.append(missing_headers)
         
         return np.array(features).reshape(1, -1)

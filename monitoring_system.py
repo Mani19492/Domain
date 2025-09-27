@@ -27,6 +27,7 @@ class DomainMonitoringSystem:
     def __init__(self, db_path: str = 'monitoring.db'):
         self.db_path = db_path
         self.monitoring_jobs = {}
+        self.public_monitoring = {}
         self.alert_thresholds = {
             'dns_changes': True,
             'ssl_changes': True,
@@ -55,6 +56,19 @@ class DomainMonitoringSystem:
                     last_scan TEXT,
                     next_scan TEXT,
                     active BOOLEAN DEFAULT 1,
+                    created_at TEXT NOT NULL
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS public_monitoring (
+                    id TEXT PRIMARY KEY,
+                    domain TEXT NOT NULL UNIQUE,
+                    baseline_data TEXT NOT NULL,
+                    last_scan TEXT,
+                    last_change TEXT,
+                    change_count INTEGER DEFAULT 0,
+                    status TEXT DEFAULT 'monitoring',
                     created_at TEXT NOT NULL
                 )
             ''')
@@ -449,5 +463,97 @@ class DomainMonitoringSystem:
             self._save_job_to_db(self.monitoring_jobs[job_id])
             logger.info(f"Stopped monitoring job {job_id}")
 
+    def add_public_monitoring(self, domain: str) -> str:
+        """Add domain to public monitoring."""
+        try:
+            from recon import get_recon_data
+            from ai_threat_predictor import threat_predictor
+            
+            # Check if already exists
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('SELECT id FROM public_monitoring WHERE domain = ?', (domain,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                conn.close()
+                return existing[0]
+            
+            # Get baseline data
+            baseline_recon = get_recon_data(domain)
+            baseline_threat = threat_predictor.predict_threat_level(baseline_recon)
+            
+            baseline_data = {
+                'recon': baseline_recon,
+                'threat_analysis': baseline_threat,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            job_id = hashlib.md5(f"public_{domain}_{datetime.now().isoformat()}".encode()).hexdigest()
+            
+            cursor.execute('''
+                INSERT INTO public_monitoring 
+                (id, domain, baseline_data, last_scan, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                job_id,
+                domain,
+                json.dumps(baseline_data),
+                datetime.now().isoformat(),
+                datetime.now().isoformat()
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            self.public_monitoring[job_id] = {
+                'id': job_id,
+                'domain': domain,
+                'baseline_data': baseline_data,
+                'last_scan': datetime.now().isoformat(),
+                'status': 'monitoring',
+                'change_count': 0
+            }
+            
+            logger.info(f"Added {domain} to public monitoring")
+            return job_id
+            
+        except Exception as e:
+            logger.error(f"Error adding public monitoring: {str(e)}")
+            raise
+    
+    def get_public_monitoring_jobs(self) -> List[dict]:
+        """Get all public monitoring jobs."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, domain, last_scan, last_change, change_count, status, created_at
+                FROM public_monitoring
+                ORDER BY created_at DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            jobs = []
+            for row in rows:
+                jobs.append({
+                    'id': row[0],
+                    'domain': row[1],
+                    'last_scan': row[2],
+                    'last_change': row[3],
+                    'change_count': row[4],
+                    'status': row[5],
+                    'created_at': row[6],
+                    'has_updates': row[4] > 0
+                })
+            
+            return jobs
+            
+        except Exception as e:
+            logger.error(f"Error getting public monitoring jobs: {str(e)}")
+            return []
 # Initialize global monitoring system
 monitoring_system = DomainMonitoringSystem()
