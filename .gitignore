@@ -128,6 +128,20 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Project specific
+*.db
+*.sqlite
+*.sqlite3
+monitoring.db
+domain_recon.db
+models/
+logs/
+static/uploads/
+temp/
+*.pdf
+*.pkl
+*.joblib
+
 # IDE
 .vscode/
 .idea/
@@ -144,12 +158,16 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Temporary files
-*.tmp
-*.temp
-temp/
-tmp/
+# Redis
+dump.rdb
 
-# PDF reports
-*.pdf
-reports/
+# Certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Backup files
+*.bak
+*.backup
+*.old
