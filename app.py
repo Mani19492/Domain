@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from flask import Flask, render_template, request, jsonify, send_file, session
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room
 from dotenv import load_dotenv
 from recon import get_recon_data
 from auth_check import check_authenticity, get_official_link
@@ -29,6 +29,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import threading
 import time
+from threading import Thread
 
 # Configure logging
 logging.basicConfig(
@@ -50,6 +51,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Store active scans
 active_scans = {}
+scan_results = {}
 workflow_executions = {}
 
 # Simple rate limiting: track requests per IP
@@ -346,8 +348,8 @@ def perform_comprehensive_scan(scan_id, domain):
             'scan_id': scan_id,
             'message': 'Analyzing domain authenticity...'
         }, room=scan_id)
-        
-        authenticity_result = analyze_authenticity(recon_data)
+
+        authenticity_result = check_authenticity(f'https://{domain}')
         results['authenticity'] = authenticity_result
         
         # Step 3: AI Threat Analysis
