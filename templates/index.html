@@ -433,7 +433,7 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1><i class="fas fa-shield-alt"></i> Advanced Domain Reconnaissance</h1>
+            <h1><i class="fas fa-shield-alt"></i> AI-Powered Cybersecurity Intelligence Platform</h1>
             <p>AI-Powered Cybersecurity Intelligence Platform</p>
         </div>
     </div>
@@ -459,7 +459,7 @@
                 
                 <div class="scan-form">
                     <input type="text" id="domainInput" class="domain-input" placeholder="Enter domain (e.g., example.com)" />
-                    <button id="scanBtn" class="scan-btn" onclick="startScan()">
+                    <button id="scanBtn" class="scan-btn" onclick="startComprehensiveScan()">
                         <i class="fas fa-play"></i> Analyze Domain
                     </button>
                 </div>
@@ -548,7 +548,7 @@
             // Enter key support
             document.getElementById('domainInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    startScan();
+                    startComprehensiveScan();
                 }
             });
             
@@ -601,7 +601,7 @@
             }
         }
 
-        function startScan() {
+        function startComprehensiveScan() {
             const domain = document.getElementById('domainInput').value.trim();
             
             if (!domain) {
