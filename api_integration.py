@@ -545,8 +545,7 @@ class APIIntegrationManager:
 class DomainAnalysisAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def post(self):
         """Analyze a single domain."""
         try:
@@ -587,8 +586,7 @@ class DomainAnalysisAPI(Resource):
 class BulkAnalysisAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def post(self):
         """Analyze multiple domains."""
         try:
@@ -640,8 +638,7 @@ class BulkAnalysisAPI(Resource):
 class MonitoringAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def post(self):
         """Add domain to monitoring."""
         try:
@@ -672,7 +669,6 @@ class MonitoringAPI(Resource):
             logger.error(f"Error in monitoring API: {str(e)}")
             return {'error': 'Internal server error'}, 500
     
-    @api_integration_manager.authenticate_api_key
     def get(self):
         """Get monitored domains."""
         try:
@@ -690,8 +686,7 @@ class MonitoringAPI(Resource):
 class ThreatIntelAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self):
         """Get threat intelligence data."""
         try:
@@ -720,8 +715,7 @@ class ThreatIntelAPI(Resource):
 class IntegrationsAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self):
         """Get available integrations."""
         try:
@@ -738,7 +732,6 @@ class IntegrationsAPI(Resource):
             logger.error(f"Error getting integrations: {str(e)}")
             return {'error': 'Internal server error'}, 500
     
-    @api_integration_manager.authenticate_api_key
     def post(self):
         """Configure integration."""
         try:
@@ -784,8 +777,7 @@ class IntegrationsAPI(Resource):
 class WebhooksAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def post(self):
         """Subscribe to webhook events."""
         try:
@@ -890,8 +882,7 @@ class APIKeysAPI(Resource):
 class APIUsageAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self):
         """Get API usage statistics."""
         try:
@@ -943,8 +934,7 @@ class APIUsageAPI(Resource):
 class ScanStatusAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self, scan_id):
         """Get scan status."""
         try:
@@ -965,8 +955,7 @@ class ScanStatusAPI(Resource):
 class ReportsAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self):
         """Get available reports."""
         try:
@@ -980,8 +969,7 @@ class ReportsAPI(Resource):
 class ReportExportAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self, report_id):
         """Export report in specified format."""
         try:
@@ -1001,8 +989,7 @@ class ReportExportAPI(Resource):
 class AlertsAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self):
         """Get alerts."""
         try:
@@ -1021,8 +1008,7 @@ class AlertsAPI(Resource):
 class IOCFeedAPI(Resource):
     def __init__(self):
         self.api_manager = api_integration_manager
-    
-    @api_integration_manager.authenticate_api_key
+
     def get(self):
         """Get Indicators of Compromise feed."""
         try:

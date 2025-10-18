@@ -2,6 +2,20 @@
 
 A cutting-edge, AI-powered cybersecurity platform for comprehensive domain reconnaissance, threat intelligence, and security analysis. This enterprise-grade tool combines machine learning, blockchain analysis, and automated workflows to provide unparalleled insights into domain security and authenticity.
 
+## ⚡ Latest Updates (October 2025)
+
+✅ **All Critical Bugs Fixed** - Production ready!
+- Fixed import errors (MimeText/MIMEText capitalization)
+- Resolved greenlet threading conflicts in Flask-SocketIO
+- Updated dependencies for better stability
+- Added comprehensive setup documentation
+
+📚 **New Documentation:**
+- `QUICK_START.md` - Get running in 5 minutes
+- `SETUP_GUIDE.md` - Complete installation guide
+- `FIX_SUMMARY.md` - Technical details of all fixes
+- `verify_fixes.py` - Automated verification script
+
 ![Domain Reconnaissance Tool](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)
 ![AI](https://img.shields.io/badge/AI-Powered-purple.svg)

@@ -47,7 +47,7 @@ app.secret_key = 'your-secret-key-here'
 # Initialize API integration
 api_manager = initialize_api_integration(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Store active scans
 active_scans = {}
