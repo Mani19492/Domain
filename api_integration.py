@@ -28,10 +28,10 @@ class APIIntegrationManager:
         
         # Rate limiting
         self.limiter = Limiter(
-            app,
             key_func=get_remote_address,
             default_limits=["200 per day", "50 per hour"]
         )
+        self.limiter.init_app(app)
         
         # API configuration
         self.api_config = {

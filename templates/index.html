@@ -655,23 +655,28 @@
                 fetch(`/api/scan/${scanId}/status`)
                     .then(response => response.json())
                     .then(data => {
+                        console.log('Poll response:', data);
                         if (data.status === 'completed') {
+                            console.log('Scan completed, displaying results...');
                             displayResults(data.result);
                             resetScanButton();
                             showToast('Scan completed successfully!', 'success');
                         } else if (data.status === 'error') {
+                            console.error('Scan error:', data.error);
                             showToast('Scan failed: ' + data.error, 'error');
                             resetScanButton();
                         } else {
+                            console.log('Scan in progress, status:', data.status, 'progress:', data.progress);
                             setTimeout(poll, 2000);
                         }
                     })
                     .catch(error => {
+                        console.error('Error polling scan status:', error);
                         showToast('Error checking scan status: ' + error.message, 'error');
                         resetScanButton();
                     });
             };
-            
+
             setTimeout(poll, 1000);
         }
 
@@ -687,9 +692,14 @@
         }
 
         function displayResults(data) {
+            console.log('displayResults called with data:', data);
             const resultsSection = document.getElementById('resultsSection');
+            if (!resultsSection) {
+                console.error('resultsSection element not found!');
+                return;
+            }
             resultsSection.style.display = 'grid';
-            
+
             let html = '';
             
             // Authenticity Card
