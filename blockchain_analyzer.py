@@ -63,7 +63,7 @@ class BlockchainDomainAnalyzer:
             for network, endpoint in self.rpc_endpoints.items():
                 try:
                     w3 = Web3(Web3.HTTPProvider(endpoint))
-                    if w3.isConnected():
+                    if w3.is_connected():
                         self.w3_connections[network] = w3
                         logger.info(f"Connected to {network} network")
                     else:

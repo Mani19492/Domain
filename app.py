@@ -628,10 +628,13 @@ def extract_threat_recommendations(results):
 @app.route('/api/scan/<scan_id>/status')
 def get_scan_status(scan_id):
     """Get scan status and results."""
-    if scan_id not in active_scans:
+    # Check both scan_results and active_scans
+    if scan_id in scan_results:
+        return jsonify(scan_results[scan_id])
+    elif scan_id in active_scans:
+        return jsonify(active_scans[scan_id])
+    else:
         return jsonify({'error': 'Scan not found'}), 404
-    
-    return jsonify(active_scans[scan_id])
 
 @app.route('/api/scan/<scan_id>/download')
 def download_report(scan_id):
