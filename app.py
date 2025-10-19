@@ -627,7 +627,7 @@ def extract_threat_recommendations(results):
 
 @app.route('/api/scan/<scan_id>/status')
 def get_scan_status(scan_id):
-    """Get scan status and results."""
+    """Get scan status and results (no rate limiting)."""
     # Check both scan_results and active_scans
     if scan_id in scan_results:
         return jsonify(scan_results[scan_id])

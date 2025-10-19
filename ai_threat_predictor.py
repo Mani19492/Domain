@@ -212,24 +212,24 @@ class ThreatPredictor:
             
             # Anomaly detection
             anomaly_score = self.anomaly_detector.decision_function(features_scaled)[0]
-            is_anomaly = self.anomaly_detector.predict(features_scaled)[0] == -1
-            
+            is_anomaly = bool(self.anomaly_detector.predict(features_scaled)[0] == -1)
+
             # Rule-based checks
             rule_based_flags = self._rule_based_analysis(domain_data)
-            
+
             # Overall risk score
             risk_score = int(phishing_prob * 100)
             if is_anomaly:
                 risk_score = min(100, risk_score + 20)
             if rule_based_flags:
                 risk_score = min(100, risk_score + len(rule_based_flags) * 10)
-            
+
             return {
-                'risk_score': risk_score,
-                'phishing_probability': round(phishing_prob * 100, 2),
+                'risk_score': int(risk_score),
+                'phishing_probability': float(round(phishing_prob * 100, 2)),
                 'phishing_risk': phishing_risk,
-                'is_anomaly': is_anomaly,
-                'anomaly_score': round(anomaly_score, 3),
+                'is_anomaly': bool(is_anomaly),
+                'anomaly_score': float(round(anomaly_score, 3)),
                 'rule_based_flags': rule_based_flags,
                 'recommendations': self._generate_recommendations(domain_data, risk_score)
             }
