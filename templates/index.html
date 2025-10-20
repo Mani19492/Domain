@@ -1517,6 +1517,34 @@
             const geo = data.geolocation || {};
             const analysisDate = new Date().toLocaleString();
 
+            // Process DNS records from array to grouped object
+            const dnsRecords = {};
+            if (recon.dns && Array.isArray(recon.dns)) {
+                recon.dns.forEach(record => {
+                    if (!dnsRecords[record.type]) {
+                        dnsRecords[record.type] = [];
+                    }
+                    if (record.value !== 'No records found') {
+                        dnsRecords[record.type].push(record.value);
+                    }
+                });
+            }
+
+            // Extract server and technologies
+            let serverTech = 'Not detected';
+            let techs = [];
+            if (recon.technologies && Array.isArray(recon.technologies)) {
+                recon.technologies.forEach(tech => {
+                    if (typeof tech === 'string') {
+                        if (tech.toLowerCase().startsWith('server:')) {
+                            serverTech = tech.replace(/^server:\s*/i, '');
+                        } else {
+                            techs.push(tech);
+                        }
+                    }
+                });
+            }
+
             let html = `
                 <table class="domain-info-table">
                     <tr>
@@ -1540,23 +1568,23 @@
                     </tr>
                     <tr>
                         <th>A Records</th>
-                        <td>${recon.dns?.A?.join(', ') || 'N/A'}</td>
+                        <td>${dnsRecords.A?.join(', ') || 'N/A'}</td>
                     </tr>
                     <tr>
                         <th>AAAA Records</th>
-                        <td>${recon.dns?.AAAA?.join(', ') || 'N/A'}</td>
+                        <td>${dnsRecords.AAAA?.join(', ') || 'N/A'}</td>
                     </tr>
                     <tr>
                         <th>MX Records</th>
-                        <td>${recon.dns?.MX?.join(', ') || 'N/A'}</td>
+                        <td>${dnsRecords.MX?.join(', ') || 'N/A'}</td>
                     </tr>
                     <tr>
                         <th>NS Records</th>
-                        <td>${recon.dns?.NS?.join(', ') || 'N/A'}</td>
+                        <td>${dnsRecords.NS?.join(', ') || 'N/A'}</td>
                     </tr>
                     <tr>
                         <th>TXT Records</th>
-                        <td style="word-break: break-all;">${recon.dns?.TXT?.join(', ') || 'N/A'}</td>
+                        <td style="word-break: break-all;">${dnsRecords.TXT?.join(', ') || 'N/A'}</td>
                     </tr>
                     <tr>
                         <th colspan="2" style="background: rgba(59, 130, 246, 0.1); padding: 1rem;">
@@ -1566,8 +1594,8 @@
                     ${recon.security_headers ? Object.entries(recon.security_headers).map(([key, value]) => `
                         <tr>
                             <th>${key}</th>
-                            <td style="color: ${value === 'Not Set' ? 'var(--warning-color)' : 'var(--success-color)'};">
-                                ${value || 'Not Set'}
+                            <td style="color: ${value === 'Not set' || value === 'Not Set' ? 'var(--warning-color)' : 'var(--success-color)'};">
+                                ${value || 'Not set'}
                             </td>
                         </tr>
                     `).join('') : ''}
@@ -1578,11 +1606,11 @@
                     </tr>
                     <tr>
                         <th>Server</th>
-                        <td>${recon.technologies?.find(t => t.type === 'server')?.name || 'Not detected'}</td>
+                        <td>${serverTech}</td>
                     </tr>
                     <tr>
                         <th>Technologies</th>
-                        <td>${recon.technologies?.map(t => t.name).join(', ') || 'Not detected'}</td>
+                        <td>${techs.length > 0 ? techs.join(', ') : 'Not detected'}</td>
                     </tr>
                 </table>
             `;
