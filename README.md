@@ -81,7 +81,11 @@ A cutting-edge, AI-powered cybersecurity platform for comprehensive domain recon
 - **Reverse IP Lookup**: Other domains hosted on the same IP
 - **Network Traceroute**: Network path analysis to target domain
 - **Email Discovery**: Associated email addresses extraction
-- **Wayback Machine**: Historical website snapshots and images
+- **Wayback Machine Integration**:
+  - Historical website snapshots with preview images
+  - Interactive timeline with year-based filtering
+  - Visual archive gallery with thumbnail previews
+  - Direct links to archived versions
 - **Threat Feed Integration**: Real-time IOC correlation
 
 ### 🎨 Next-Generation Web Interface
@@ -348,6 +352,7 @@ The tool uses advanced algorithms to determine domain authenticity:
 - **Executive Summary**: High-level findings and recommendations
 - **Technical Details**: In-depth technical analysis
 - **Visual Charts**: Data visualization and graphs
+- **Historical Analysis**: Interactive archive timeline with year filtering
 - **Actionable Insights**: Security recommendations and next steps
 - **AI Insights**: Machine learning-powered analysis
 
