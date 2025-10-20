@@ -24,6 +24,7 @@ from workflow_automation import workflow_automation
 from monitoring_system import monitoring_system
 from owasp_checker import owasp_checker
 from ip_geolocation import ip_geolocation
+from wayback_analyzer import wayback_analyzer
 import tempfile
 import uuid
 import re
@@ -159,7 +160,11 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
 
         # IP Geolocation
         geolocation_data = ip_geolocation.get_location_data(domain)
-        update_scan_progress(scan_id, 80, "Running workflow automation...")
+        update_scan_progress(scan_id, 77, "Analyzing Wayback Machine archives...")
+
+        # Wayback Machine Analysis
+        wayback_data = wayback_analyzer.analyze_domain(domain)
+        update_scan_progress(scan_id, 82, "Running workflow automation...")
 
         # Execute all workflows automatically
         workflow_results = execute_all_workflows(domain, recon_data, threat_analysis)
@@ -174,6 +179,7 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
             'web3_analysis': web3_analysis,
             'owasp_analysis': owasp_analysis,
             'geolocation': geolocation_data,
+            'wayback_data': wayback_data,
             'workflow_results': workflow_results,
             'official_link': get_official_link(domain) if not auth_result['is_genuine'] else None
         }

@@ -600,6 +600,228 @@
             background: var(--success-color);
             color: white;
         }
+
+        /* Wayback Machine Styles */
+        .wayback-container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .wayback-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .wayback-stat {
+            background: var(--dark-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .wayback-stat:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .wayback-stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .wayback-stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .snapshot-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .snapshot-card {
+            background: var(--dark-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .snapshot-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+        }
+
+        .snapshot-thumbnail {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .snapshot-thumbnail iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+            transform: scale(0.5);
+            transform-origin: top left;
+            width: 200%;
+            height: 200%;
+        }
+
+        .snapshot-thumbnail-placeholder {
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .snapshot-thumbnail-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.3;
+        }
+
+        .snapshot-info {
+            padding: 1.25rem;
+        }
+
+        .snapshot-date {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .snapshot-timestamp {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+
+        .snapshot-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .snapshot-btn {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .snapshot-btn:hover {
+            background: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        .timeline-container {
+            background: var(--dark-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .timeline {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .timeline-year {
+            padding: 0.5rem 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .timeline-year:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .wayback-archive-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--warning-color) 100%);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 1rem 0;
+        }
+
+        .wayback-archive-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .no-snapshots {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .no-snapshots i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .snapshot-gallery {
+                grid-template-columns: 1fr;
+            }
+
+            .wayback-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline {
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -655,6 +877,11 @@
             </div>
 
             <div id="resultsSection" class="results-section"></div>
+
+            <div id="waybackContainer" class="wayback-container" style="display: none;">
+                <h3><i class="fas fa-history"></i> Wayback Machine Archives</h3>
+                <div id="wayback-content"></div>
+            </div>
 
             <div id="owaspContainer" class="globe-container" style="display: none;">
                 <h3><i class="fas fa-shield-alt"></i> OWASP Security Analysis</h3>
@@ -899,6 +1126,11 @@
             // Display OWASP analysis if available
             if (data.owasp_analysis) {
                 displayOWASPResults(data.owasp_analysis);
+            }
+
+            // Display Wayback Machine data if available
+            if (data.wayback_data) {
+                displayWaybackData(data.wayback_data, data.domain);
             }
 
             let html = '';
@@ -1429,6 +1661,146 @@
             }
 
             document.getElementById('owasp-results').innerHTML = html;
+        }
+
+        function displayWaybackData(waybackData, domain) {
+            if (!waybackData.success && !waybackData.is_archived) {
+                return;
+            }
+
+            document.getElementById('waybackContainer').style.display = 'block';
+
+            let html = '';
+
+            if (!waybackData.is_archived) {
+                html = `
+                    <div class="no-snapshots">
+                        <i class="fas fa-archive"></i>
+                        <h3>No Archives Found</h3>
+                        <p>This domain has not been archived by the Wayback Machine yet.</p>
+                    </div>
+                `;
+                document.getElementById('wayback-content').innerHTML = html;
+                return;
+            }
+
+            const closest = waybackData.closest_snapshot;
+            const totalSnapshots = waybackData.total_snapshots || 0;
+            const firstSnapshot = waybackData.first_snapshot;
+            const lastSnapshot = waybackData.last_snapshot;
+            const yearsActive = waybackData.years_active || [];
+
+            html += `
+                <div style="margin-bottom: 2rem;">
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        This domain has been archived ${totalSnapshots} times by the Wayback Machine,
+                        spanning ${yearsActive.length} years of history.
+                    </p>
+                    ${closest ? `
+                        <a href="${closest.url}" target="_blank" class="wayback-archive-link">
+                            <i class="fas fa-external-link-alt"></i>
+                            View Most Recent Archive (${closest.date})
+                        </a>
+                    ` : ''}
+                </div>
+
+                <div class="wayback-stats">
+                    <div class="wayback-stat">
+                        <div class="wayback-stat-value">${totalSnapshots}</div>
+                        <div class="wayback-stat-label">Total Snapshots</div>
+                    </div>
+                    <div class="wayback-stat">
+                        <div class="wayback-stat-value">${yearsActive.length}</div>
+                        <div class="wayback-stat-label">Years Active</div>
+                    </div>
+                    ${firstSnapshot ? `
+                        <div class="wayback-stat">
+                            <div class="wayback-stat-value" style="font-size: 1.5rem;">${firstSnapshot.year}</div>
+                            <div class="wayback-stat-label">First Archive</div>
+                        </div>
+                    ` : ''}
+                    ${lastSnapshot ? `
+                        <div class="wayback-stat">
+                            <div class="wayback-stat-value" style="font-size: 1.5rem;">${lastSnapshot.year}</div>
+                            <div class="wayback-stat-label">Latest Archive</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            if (yearsActive.length > 0) {
+                html += `
+                    <div class="timeline-container">
+                        <h4 style="margin-bottom: 1rem;">
+                            <i class="fas fa-calendar-alt"></i> Archive Timeline
+                        </h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Years when snapshots were captured
+                        </p>
+                        <div class="timeline">
+                            ${yearsActive.map(year => `
+                                <div class="timeline-year">${year}</div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const snapshots = waybackData.snapshots || [];
+            if (snapshots.length > 0) {
+                html += `
+                    <div style="margin-top: 2rem;">
+                        <h4 style="margin-bottom: 1rem;">
+                            <i class="fas fa-images"></i> Archived Snapshots
+                        </h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Showing ${Math.min(snapshots.length, 20)} most recent snapshots
+                        </p>
+                        <div class="snapshot-gallery">
+                            ${snapshots.slice(0, 20).map((snapshot, index) => `
+                                <div class="snapshot-card" onclick="window.open('${snapshot.url}', '_blank')">
+                                    <div class="snapshot-thumbnail">
+                                        <div class="snapshot-thumbnail-placeholder">
+                                            <i class="fas fa-camera-retro"></i>
+                                            <div style="font-size: 0.85rem;">Click to view</div>
+                                        </div>
+                                    </div>
+                                    <div class="snapshot-info">
+                                        <div class="snapshot-date">${snapshot.date}</div>
+                                        <div class="snapshot-timestamp">
+                                            <i class="fas fa-clock"></i> ${snapshot.timestamp}
+                                        </div>
+                                        <div class="snapshot-actions">
+                                            <a href="${snapshot.url}" target="_blank" class="snapshot-btn" onclick="event.stopPropagation();">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border: 1px solid var(--border-color);">
+                    <h4 style="margin-bottom: 1rem;">
+                        <i class="fas fa-info-circle"></i> About Wayback Machine
+                    </h4>
+                    <p style="color: var(--text-secondary); line-height: 1.8;">
+                        The Wayback Machine is a digital archive of the World Wide Web maintained by the Internet Archive.
+                        It allows you to see how websites looked in the past, track changes over time, and recover
+                        content that may no longer be available on the live web.
+                    </p>
+                    <a href="https://web.archive.org/web/*/${domain}" target="_blank" class="wayback-archive-link" style="margin-top: 1rem;">
+                        <i class="fas fa-archive"></i>
+                        View Complete Archive History
+                    </a>
+                </div>
+            `;
+
+            document.getElementById('wayback-content').innerHTML = html;
         }
 
         function addToMonitoring() {
