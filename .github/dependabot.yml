@@ -1,0 +1,55 @@
+```yaml
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "pip" # For Python dependencies (requirements.txt or Pipfile)
+    directory: "/" # Location of requirements.txt or Pipfile
+    schedule:
+      interval: "weekly" # Check for updates weekly
+      day: "monday" # Run updates on Mondays
+      time: "09:00" # Run at 9:00 AM UTC
+    open-pull-requests-limit: 10 # Limit open PRs to avoid overwhelming the repo
+    target-branch: "main" # Target the main branch for updates
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps" # Prefix for commit messages
+      include: "scope" # Include scope in commit messages
+    ignore:
+      - dependency-name: "tensorflow" # Avoid major version updates for TensorFlow due to potential breaking changes
+        versions: [">=3.0.0"]
+
+  - package-ecosystem: "npm" # For JavaScript dependencies (D3.js, etc.)
+    directory: "/" # Location of package.json
+    schedule:
+      interval: "weekly" # Check for updates weekly
+      day: "monday" # Run updates on Mondays
+      time: "09:00" # Run at 9:00 AM UTC
+    open-pull-requests-limit: 5 # Limit open PRs for JavaScript dependencies
+    target-branch: "main" # Target the main branch for updates
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "deps" # Prefix for commit messages
+      include: "scope" # Include scope in commit messages
+
+  - package-ecosystem: "docker" # For Docker dependencies (Dockerfile)
+    directory: "/" # Location of Dockerfile
+    schedule:
+      interval: "monthly" # Check for updates monthly (Docker updates are less frequent)
+      day: "first" # Run on the first day of the month
+      time: "09:00" # Run at 9:00 AM UTC
+    open-pull-requests-limit: 3 # Limit open PRs for Docker updates
+    target-branch: "main" # Target the main branch for updates
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "deps" # Prefix for commit messages
+      include: "scope" # Include scope in commit messages
