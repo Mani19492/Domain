@@ -70,20 +70,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function startAnalysis(domain) {
+    async function startAnalysis(domain) {
         currentDomain = domain;
         showPage('analyzing');
 
-        setTimeout(() => {
-            showResults(domain);
-        }, 1200);
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ domain: domain })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to start scan');
+            }
+
+            const data = await response.json();
+            const scanId = data.scan_id;
+
+            pollScanStatus(scanId);
+        } catch (error) {
+            console.error('Error starting scan:', error);
+            alert('Failed to start scan. Please try again.');
+            showPage('landing');
+        }
     }
 
-    function showResults(domain) {
+    async function pollScanStatus(scanId) {
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/scan/${scanId}/status`);
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    clearInterval(pollInterval);
+                    showResults(data);
+                } else if (data.status === 'error') {
+                    clearInterval(pollInterval);
+                    alert('Scan failed: ' + (data.error || 'Unknown error'));
+                    showPage('landing');
+                }
+            } catch (error) {
+                console.error('Error polling scan status:', error);
+            }
+        }, 2000);
+    }
+
+    function showResults(scanData) {
+        const domain = scanData.domain;
         document.getElementById('analyzedDomain').textContent = domain;
         headerSearchInput.value = domain;
         showPage('results');
-        loadOverviewContent(domain);
+
+        window.scanResults = scanData.result;
+
+        loadOverviewContent(scanData);
     }
 
     function switchTab(tab) {
@@ -96,18 +139,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector(`[data-content="${tab}"]`).classList.add('active');
 
         if (tab === 'overview') {
-            loadOverviewContent(currentDomain);
+            loadOverviewContent(window.scanResults);
         } else if (tab === 'security') {
-            loadSecurityContent(currentDomain);
+            loadSecurityContent(window.scanResults);
         } else if (tab === 'technical') {
-            loadTechnicalContent(currentDomain);
+            loadTechnicalContent(window.scanResults);
         } else if (tab === 'threat') {
-            loadThreatContent(currentDomain);
+            loadThreatContent(window.scanResults);
         }
     }
 
-    function loadOverviewContent(domain) {
+    function loadOverviewContent(scanData) {
         const content = document.querySelector('[data-content="overview"]');
+        const data = scanData.result || scanData;
+        const domain = data.domain || currentDomain;
+
+        const recon = data.reconnaissance || {};
+        const threat = data.threat_analysis || {};
+        const compliance = data.compliance_audit || {};
+        const geolocation = data.geolocation || {};
+        const authenticity = data.authenticity || {};
+        const web3 = data.web3_analysis || {};
+
+        const securityScore = Math.round(100 - (threat.risk_score || 50));
+        const riskScore = Math.round(threat.risk_score || 45);
+        const complianceScore = Math.round(compliance.overall_score || 60);
+
         content.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-card">
@@ -118,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div>
                         <p class="stat-label">Security Score</p>
-                        <p class="stat-value-text">65/100</p>
+                        <p class="stat-value-text">${securityScore}/100</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -129,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div>
                         <p class="stat-label">Risk Score</p>
-                        <p class="stat-value-text">45/100</p>
+                        <p class="stat-value-text">${riskScore}/100</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -142,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div>
                         <p class="stat-label">Compliance</p>
-                        <p class="stat-value-text">60/100</p>
+                        <p class="stat-value-text">${complianceScore}/100</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -168,26 +225,26 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <circle cx="12" cy="10" r="3"></circle>
                             </svg>
                         </div>
-                        <p style="color: #a1a1aa;">United States</p>
+                        <p style="color: #a1a1aa;">${geolocation.country || 'Unknown'}</p>
                     </div>
                     <div style="border-top: 1px solid rgba(113, 113, 122, 0.3); padding-top: 1rem;">
                         <h4 style="color: #e4e4e7; margin-bottom: 0.75rem; font-size: 0.875rem;">Location Details</h4>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
                             <div>
                                 <p style="color: #71717a; font-size: 0.75rem; margin-bottom: 0.25rem;">Country</p>
-                                <p style="color: #d4d4d8; font-size: 0.875rem;">United States</p>
+                                <p style="color: #d4d4d8; font-size: 0.875rem;">${geolocation.country || 'Unknown'}</p>
                             </div>
                             <div>
                                 <p style="color: #71717a; font-size: 0.75rem; margin-bottom: 0.25rem;">City</p>
-                                <p style="color: #d4d4d8; font-size: 0.875rem;">San Francisco</p>
+                                <p style="color: #d4d4d8; font-size: 0.875rem;">${geolocation.city || 'Unknown'}</p>
                             </div>
                             <div>
                                 <p style="color: #71717a; font-size: 0.75rem; margin-bottom: 0.25rem;">ISP</p>
-                                <p style="color: #d4d4d8; font-size: 0.875rem;">Cloudflare, Inc.</p>
+                                <p style="color: #d4d4d8; font-size: 0.875rem;">${geolocation.isp || 'Unknown'}</p>
                             </div>
                             <div>
                                 <p style="color: #71717a; font-size: 0.75rem; margin-bottom: 0.25rem;">ASN</p>
-                                <p style="color: #d4d4d8; font-size: 0.875rem;">AS13335</p>
+                                <p style="color: #d4d4d8; font-size: 0.875rem;">${geolocation.asn || 'Unknown'}</p>
                             </div>
                         </div>
                     </div>
@@ -198,10 +255,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="progress-bar-wrapper">
                         <div class="progress-bar-header">
                             <span class="progress-bar-label">Trust Score</span>
-                            <span class="progress-bar-value">78/100</span>
+                            <span class="progress-bar-value">${authenticity.trust_score || 0}/100</span>
                         </div>
                         <div class="progress-bar-track">
-                            <div class="progress-bar-fill" style="width: 78%;"></div>
+                            <div class="progress-bar-fill" style="width: ${authenticity.trust_score || 0}%;"></div>
                         </div>
                     </div>
                     <div style="margin-top: 1rem;">
@@ -291,8 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    function loadSecurityContent(domain) {
+    function loadSecurityContent(scanData) {
         const content = document.querySelector('[data-content="security"]');
+        const data = scanData || window.scanResults || {};
+        const owasp = data.owasp_analysis || {};
+        const securityScore = owasp.security_score || 65;
         content.innerHTML = `
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem;">
@@ -301,17 +361,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p style="color: #a1a1aa; font-size: 0.875rem;">Based on OWASP Top 10 security standards</p>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 2.5rem; color: #22d3ee; margin-bottom: 0.25rem;">65</div>
+                        <div style="font-size: 2.5rem; color: #22d3ee; margin-bottom: 0.25rem;">${securityScore}</div>
                         <p style="color: #a1a1aa; font-size: 0.875rem;">/ 100</p>
                     </div>
                 </div>
                 <div class="progress-bar-wrapper">
                     <div class="progress-bar-track" style="height: 0.75rem;">
-                        <div class="progress-bar-fill" style="width: 65%;"></div>
+                        <div class="progress-bar-fill" style="width: ${securityScore}%;"></div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge yellow">Medium Risk</span>
-                        <p style="color: #a1a1aa; font-size: 0.875rem;">Security Score: 65/100</p>
+                        <span class="badge ${securityScore > 70 ? 'green' : securityScore > 40 ? 'yellow' : 'red'}">${securityScore > 70 ? 'Low Risk' : securityScore > 40 ? 'Medium Risk' : 'High Risk'}</span>
+                        <p style="color: #a1a1aa; font-size: 0.875rem;">Security Score: ${securityScore}/100</p>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(113, 113, 122, 0.3);">
@@ -385,8 +445,14 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    function loadTechnicalContent(domain) {
+    function loadTechnicalContent(scanData) {
         const content = document.querySelector('[data-content="technical"]');
+        const data = scanData || window.scanResults || {};
+        const domain = data.domain || currentDomain;
+        const recon = data.reconnaissance || {};
+        const dns = recon.dns || {};
+        const ssl = recon.ssl || {};
+        const headers = recon.security_headers || {};
         content.innerHTML = `
             <div class="card">
                 <h3>DNS Records</h3>
@@ -477,12 +543,15 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    function loadThreatContent(domain) {
+    function loadThreatContent(scanData) {
         const content = document.querySelector('[data-content="threat"]');
+        const data = scanData || window.scanResults || {};
+        const threat = data.threat_analysis || {};
+        const riskScore = Math.round(threat.risk_score || 45);
         content.innerHTML = `
             <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
                 ${[
-                    { label: 'Overall Risk', value: '45/100', icon: 'shield', progress: 45 },
+                    { label: 'Overall Risk', value: `${riskScore}/100`, icon: 'shield', progress: riskScore },
                     { label: 'Phishing Risk', value: 'Low', icon: 'trending', badge: 'Minimal Threat' },
                     { label: 'Anomaly', value: 'None', icon: 'network', badge: 'Normal Activity' }
                 ].map(stat => `
