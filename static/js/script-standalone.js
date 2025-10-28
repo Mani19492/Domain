@@ -165,6 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const riskScore = Math.round(threat.risk_score || 45);
         const complianceScore = Math.round(compliance.overall_score || 60);
 
+        setTimeout(() => initializeMap(geolocation), 100);
+
         content.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-card">
@@ -218,15 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="grid-2">
                 <div class="card">
                     <h3>IP Geolocation Map</h3>
-                    <div style="text-align: center; padding: 2rem 0;">
-                        <div style="width: 4rem; height: 4rem; margin: 0 auto 1rem; background: linear-gradient(135deg, #52525b, #71717a); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(160, 160, 160, 0.2);">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                        </div>
-                        <p style="color: #a1a1aa;">${geolocation.country || 'Unknown'}</p>
-                    </div>
+                    <div id="chartdiv" style="width: 100%; height: 400px; margin-bottom: 1rem;"></div>
                     <div style="border-top: 1px solid rgba(113, 113, 122, 0.3); padding-top: 1rem;">
                         <h4 style="color: #e4e4e7; margin-bottom: 0.75rem; font-size: 0.875rem;">Location Details</h4>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
@@ -333,19 +327,127 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>Web3 & Blockchain Analysis</h3>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                     <span style="color: #a1a1aa;">Blockchain Related</span>
-                    <span style="color: #d4d4d8;">Crypto Keywords Detected</span>
+                    <span style="color: #d4d4d8;">${web3.blockchain_type || 'Traditional Domain'}</span>
                 </div>
                 <div style="background: rgba(0, 0, 0, 0.6); padding: 0.75rem; border: 1px solid rgba(113, 113, 122, 0.3); border-radius: 0.5rem;">
-                    <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem;">Keywords:</p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                        <span class="badge gray">blockchain</span>
-                        <span class="badge gray">crypto</span>
-                        <span class="badge gray">wallet</span>
-                        <span class="badge gray">defi</span>
+                    <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem;">Analysis:</p>
+                    <p style="color: #d4d4d8; font-size: 0.875rem;">${web3.analysis || 'No blockchain-related activity detected'}</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Wayback Machine History</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="padding: 1rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(113, 113, 122, 0.3); border-radius: 0.5rem; text-align: center;">
+                        <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem;">First Snapshot</p>
+                        <p style="color: #60a5fa; font-size: 1.25rem;">${data.wayback_data?.first_snapshot || 'N/A'}</p>
                     </div>
+                    <div style="padding: 1rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(113, 113, 122, 0.3); border-radius: 0.5rem; text-align: center;">
+                        <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem;">Last Snapshot</p>
+                        <p style="color: #22d3ee; font-size: 1.25rem;">${data.wayback_data?.last_snapshot || 'N/A'}</p>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(113, 113, 122, 0.3); border-radius: 0.5rem; text-align: center;">
+                        <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem;">Total Snapshots</p>
+                        <p style="color: #4ade80; font-size: 1.25rem;">${data.wayback_data?.snapshot_count || 'N/A'}</p>
+                    </div>
+                </div>
+                <div style="padding: 1rem; background: rgba(96, 165, 250, 0.1); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem;">
+                    <p style="color: #d4d4d8; font-size: 0.875rem;">
+                        ${data.wayback_data?.available ?
+                            `Historical snapshots available dating back to ${data.wayback_data.first_snapshot}` :
+                            'No historical data available in Wayback Machine'}
+                    </p>
                 </div>
             </div>
         `;
+    }
+
+    function initializeMap(geolocation) {
+        if (!window.am5 || !geolocation.latitude || !geolocation.longitude) return;
+
+        const chartDiv = document.getElementById('chartdiv');
+        if (!chartDiv) return;
+
+        chartDiv.innerHTML = '';
+
+        const root = am5.Root.new("chartdiv");
+        root.setThemes([am5themes_Animated.new(root)]);
+
+        const chart = root.container.children.push(am5map.MapChart.new(root, {
+            panX: "rotateX",
+            panY: "rotateY",
+            projection: am5map.geoOrthographic(),
+            paddingBottom: 20,
+            paddingTop: 20,
+            paddingLeft: 20,
+            paddingRight: 20
+        }));
+
+        const polygonSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {
+            geoJSON: am5geodata_worldLow
+        }));
+
+        polygonSeries.mapPolygons.template.setAll({
+            tooltipText: "{name}",
+            toggleKey: "active",
+            interactive: true,
+            fill: am5.color(0x3a3a3a),
+            stroke: am5.color(0x52525b)
+        });
+
+        polygonSeries.mapPolygons.template.states.create("hover", {
+            fill: am5.color(0x52525b)
+        });
+
+        const backgroundSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {}));
+        backgroundSeries.mapPolygons.template.setAll({
+            fill: am5.color(0x1a1a1a),
+            fillOpacity: 0.5,
+            strokeOpacity: 0
+        });
+        backgroundSeries.data.push({
+            geometry: am5map.getGeoRectangle(90, 180, -90, -180)
+        });
+
+        const graticuleSeries = chart.series.unshift(
+            am5map.GraticuleSeries.new(root, {
+                step: 10
+            })
+        );
+        graticuleSeries.mapLines.template.set("strokeOpacity", 0.1);
+
+        const pointSeries = chart.series.push(
+            am5map.MapPointSeries.new(root, {})
+        );
+
+        pointSeries.bullets.push(function() {
+            const circle = am5.Circle.new(root, {
+                radius: 8,
+                fill: am5.color(0x22d3ee),
+                strokeWidth: 2,
+                stroke: am5.color(0xffffff),
+                tooltipText: `{title}\n{city}, {country}`
+            });
+
+            return am5.Bullet.new(root, {
+                sprite: circle
+            });
+        });
+
+        pointSeries.data.push({
+            geometry: {
+                type: "Point",
+                coordinates: [geolocation.longitude, geolocation.latitude]
+            },
+            title: geolocation.ip || "Target Location",
+            city: geolocation.city || "Unknown",
+            country: geolocation.country || "Unknown"
+        });
+
+        chart.set("rotationX", -geolocation.longitude);
+        chart.set("rotationY", -geolocation.latitude);
+
+        chart.appear(1000, 100);
     }
 
     function loadSecurityContent(scanData) {
