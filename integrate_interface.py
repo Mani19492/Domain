@@ -1,4 +1,83 @@
-let currentDomain = '';
+#!/usr/bin/env python3
+"""
+Integration script to properly connect the standalone interface with Flask backend
+"""
+
+import os
+import shutil
+
+def integrate_interface():
+    """Integrate the standalone interface files with Flask"""
+
+    print("Starting interface integration...")
+
+    # Step 1: Update Flask app to add a new route for the standalone interface
+    print("\n[1/4] Checking Flask app routes...")
+
+    app_py_path = "app.py"
+    with open(app_py_path, 'r') as f:
+        app_content = f.read()
+
+    # Check if standalone route exists
+    if '@app.route(\'/standalone\')' not in app_content:
+        print("  → Adding standalone route to Flask app...")
+
+        # Find the index route and add standalone route after it
+        index_route = "@app.route('/')\ndef index():\n    \"\"\"Main page.\"\"\"\n    return render_template('index.html')"
+
+        standalone_route = """
+@app.route('/standalone')
+def standalone():
+    \"\"\"Standalone interface.\"\"\"
+    return render_template('index-standalone copy copy.html')
+"""
+
+        new_content = app_content.replace(index_route, index_route + "\n" + standalone_route)
+
+        with open(app_py_path, 'w') as f:
+            f.write(new_content)
+
+        print("  ✓ Flask route added successfully")
+    else:
+        print("  ✓ Standalone route already exists")
+
+    # Step 2: Update HTML file paths
+    print("\n[2/4] Updating HTML template...")
+
+    html_path = "templates/index-standalone copy copy.html"
+    with open(html_path, 'r') as f:
+        html_content = f.read()
+
+    # Update CSS link
+    html_content = html_content.replace(
+        '<link rel="stylesheet" href="styles-standalone.css">',
+        '<link rel="stylesheet" href="{{ url_for(\'static\', filename=\'css/styles-standalone copy copy.css\') }}">'
+    )
+
+    # Update JS script and add Socket.IO
+    html_content = html_content.replace(
+        '<script src="script-standalone.js"></script>',
+        '<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>\n    <script src="{{ url_for(\'static\', filename=\'js/script-standalone copy copy.js\') }}"></script>'
+    )
+
+    # Remove image references that don't exist
+    html_content = html_content.replace(
+        'src="src/assets/53750a27ba3808140279ad8621aec5bc4b4231f2.png"',
+        'src="#"'
+    )
+
+    with open(html_path, 'w') as f:
+        f.write(html_content)
+
+    print("  ✓ HTML template updated successfully")
+
+    # Step 3: Update JavaScript to connect with Flask API
+    print("\n[3/4] Updating JavaScript to connect with Flask API...")
+
+    js_path = "static/js/script-standalone copy copy.js"
+
+    # Create the updated JavaScript content
+    js_content = """let currentDomain = '';
 let socket;
 let currentScanId = null;
 let currentScanData = null;
@@ -403,3 +482,47 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 });
+"""
+
+    with open(js_path, 'w') as f:
+        f.write(js_content)
+
+    print("  ✓ JavaScript updated successfully")
+
+    # Step 4: Verify all files are in place
+    print("\n[4/4] Verifying files...")
+
+    files_to_check = [
+        ("templates/index-standalone copy copy.html", "HTML template"),
+        ("static/js/script-standalone copy copy.js", "JavaScript file"),
+        ("static/css/styles-standalone copy copy.css", "CSS file"),
+    ]
+
+    all_exist = True
+    for file_path, description in files_to_check:
+        if os.path.exists(file_path):
+            print(f"  ✓ {description} found")
+        else:
+            print(f"  ✗ {description} missing at {file_path}")
+            all_exist = False
+
+    if all_exist:
+        print("\n✓ Integration complete!")
+        print("\nYou can now access the standalone interface at:")
+        print("  → http://localhost:5000/standalone")
+        print("\nTo start the application, run:")
+        print("  python app.py")
+    else:
+        print("\n⚠ Integration completed with warnings - some files were not found")
+        print("The interface may not work correctly until all files are in place.")
+
+    return all_exist
+
+if __name__ == '__main__':
+    try:
+        integrate_interface()
+    except Exception as e:
+        print(f"\n✗ Error during integration: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        exit(1)

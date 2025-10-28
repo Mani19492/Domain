@@ -92,6 +92,12 @@ def index():
     """Main page."""
     return render_template('index.html')
 
+@app.route('/standalone')
+def standalone():
+    """Standalone interface."""
+    return render_template('index-standalone copy copy.html')
+
+
 @app.route('/api/scan', methods=['POST'])
 @rate_limit()
 def scan_domain():

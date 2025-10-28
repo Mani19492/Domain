@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Domain Intelligent - Security Analysis Platform</title>
-    <link rel="stylesheet" href="styles-standalone.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles-standalone copy copy.css') }}">
 </head>
 <body>
     <!-- Landing Page -->
@@ -17,7 +17,7 @@
 
         <div class="content-wrapper">
             <div class="header-section">
-                <img src="src/assets/53750a27ba3808140279ad8621aec5bc4b4231f2.png" alt="Domain Intelligent" class="logo-image">
+                <img src="#" alt="Domain Intelligent" class="logo-image">
                 <h1 class="main-title">DOMAIN INTELLIGENT</h1>
                 <p class="subtitle">Advanced Domain Security Intelligence Platform</p>
                 <p class="tagline">Real-time threat analysis • OWASP compliance • AI-powered detection</p>
@@ -151,7 +151,7 @@
                     </svg>
                 </button>
                 <div class="header-logo-group">
-                    <img src="src/assets/53750a27ba3808140279ad8621aec5bc4b4231f2.png" alt="Domain Intelligent" class="header-logo">
+                    <img src="#" alt="Domain Intelligent" class="header-logo">
                     <h1 class="header-title">DOMAIN INTELLIGENT</h1>
                 </div>
                 <div class="header-search">
@@ -198,6 +198,7 @@
         </main>
     </div>
 
-    <script src="script-standalone.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script-standalone copy copy.js') }}"></script>
 </body>
 </html>
