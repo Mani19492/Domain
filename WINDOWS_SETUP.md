@@ -10,7 +10,7 @@
 ### Step 1: Clean Any Old Installations (2 minutes)
 ```powershell
 # Open PowerShell as Administrator and run:
-pip uninstall scikit-learn tensorflow spacy selenium twilio celery web3 -y
+pip uninstall scikit-learn tensorflow spacy selenium twilio celery -y
 ```
 
 ### Step 2: Install Dependencies (5-10 minutes)
@@ -74,7 +74,6 @@ Try scanning a domain like `example.com`
 - ❌ celery (requires Redis server)
 - ❌ twilio (SMS functionality)
 - ❌ python-telegram-bot (Telegram functionality)
-- ❌ web3 (Ethereum functionality)
 - ❌ stem (Tor functionality)
 - ❌ shap (AI explainability)
 
@@ -183,7 +182,6 @@ After installation, verify:
 
 ### ⚠️ Optional Features (May be Limited):
 - AI threat prediction (works with basic ML)
-- Blockchain analysis (limited without web3)
 - Advanced ML features (limited without TensorFlow)
 - SMS notifications (requires Twilio)
 - Telegram alerts (requires telegram-bot)

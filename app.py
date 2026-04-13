@@ -13,13 +13,11 @@ from compliance_auditor import compliance_auditor
 from real_time_monitor import real_time_monitor
 from vulnerability_correlator import vulnerability_correlator
 from collaborative_reports import collaborative_report_manager
-from blockchain_analyzer import blockchain_analyzer
 from visual_attack_mapper import visual_attack_mapper
 from automated_remediation import automated_remediation
 from multi_language_support import multi_language_support
 from api_integration import initialize_api_integration
 from graph_mapper import graph_mapper
-from web3_scanner import web3_scanner
 from workflow_automation import workflow_automation
 from monitoring_system import monitoring_system
 from owasp_checker import owasp_checker
@@ -154,12 +152,7 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
         
         # Graph analysis
         graph_data = graph_mapper.create_domain_graph(recon_data)
-        update_scan_progress(scan_id, 65, "Scanning Web3 domains...")
         
-        # Always perform Web3 analysis
-        web3_analysis = web3_scanner.scan_web3_domain(domain)
-        update_scan_progress(scan_id, 70, "Performing OWASP security checks...")
-
         # OWASP Top 20 security analysis
         owasp_analysis = owasp_checker.analyze_domain(domain)
         update_scan_progress(scan_id, 75, "Getting IP geolocation data...")
@@ -182,7 +175,6 @@ def perform_background_scan(scan_id: str, domain: str, scan_type: str):
             'reconnaissance': recon_data,
             'threat_analysis': threat_analysis,
             'graph_data': graph_data,
-            'web3_analysis': web3_analysis,
             'owasp_analysis': owasp_analysis,
             'geolocation': geolocation_data,
             'wayback_data': wayback_data,
@@ -332,7 +324,6 @@ def perform_comprehensive_scan(scan_id, domain):
             'threat_forecasting': {},
             'compliance_audit': {},
             'vulnerability_analysis': {},
-            'blockchain_analysis': {},
             'visual_attack_surface': {},
             'remediation_playbook': {},
             'workflow_results': {},
@@ -416,16 +407,6 @@ def perform_comprehensive_scan(scan_id, domain):
         vulnerability_analysis = vulnerability_correlator.correlate_vulnerabilities(recon_data)
         results['vulnerability_analysis'] = vulnerability_analysis
         
-        # Step 7: Blockchain Analysis
-        update_progress('Blockchain Analysis')
-        socketio.emit('scan_progress', {
-            'scan_id': scan_id,
-            'message': 'Analyzing blockchain domains and crypto threats...'
-        }, room=scan_id)
-        
-        blockchain_analysis = blockchain_analyzer.analyze_blockchain_domain(domain)
-        results['blockchain_analysis'] = blockchain_analysis
-        
         # Step 8: Visual Attack Surface Mapping
         update_progress('Attack Surface Mapping')
         socketio.emit('scan_progress', {
@@ -475,12 +456,6 @@ def perform_comprehensive_scan(scan_id, domain):
                 'compliance_score': results['compliance_audit'].get('overall_score', 0),
                 'framework_compliance': results['compliance_audit'].get('gdpr_compliance', {}),
                 'recommendations': results['compliance_audit'].get('recommendations', [])
-            },
-            'web3_analysis_workflow': {
-                'status': 'completed',
-                'blockchain_type': results['blockchain_analysis'].get('blockchain_type', 'traditional'),
-                'risk_assessment': results['blockchain_analysis'].get('risk_assessment', {}),
-                'recommendations': results['blockchain_analysis'].get('recommendations', [])
             }
         }
         results['workflow_results'] = workflow_results
@@ -600,10 +575,6 @@ def count_threats_detected(results):
     threat_flags = results['threat_analysis'].get('rule_based_flags', [])
     threat_count += len(threat_flags)
     
-    # From blockchain analysis
-    scam_indicators = results['blockchain_analysis'].get('scam_indicators', [])
-    threat_count += len(scam_indicators)
-    
     # From vulnerability analysis
     critical_vulns = results['vulnerability_analysis'].get('vulnerability_summary', {}).get('critical', 0)
     threat_count += critical_vulns
@@ -624,11 +595,6 @@ def extract_high_risk_indicators(results):
     if critical_vulns > 0:
         indicators.append(f"{critical_vulns} critical vulnerabilities")
     
-    # Blockchain risks
-    blockchain_risk = results['blockchain_analysis'].get('risk_assessment', {}).get('overall_risk_score', 0)
-    if blockchain_risk > 50:
-        indicators.append(f"Blockchain-related risks detected")
-    
     return indicators
 
 def extract_threat_recommendations(results):
@@ -638,10 +604,6 @@ def extract_threat_recommendations(results):
     # From threat forecasting
     forecast_recs = results['threat_forecasting'].get('recommendations', [])
     recommendations.extend(forecast_recs[:2])
-    
-    # From blockchain analysis
-    blockchain_recs = results['blockchain_analysis'].get('recommendations', [])
-    recommendations.extend(blockchain_recs[:2])
     
     # From vulnerability analysis
     vuln_recs = results['vulnerability_analysis'].get('recommendations', [])
@@ -702,11 +664,6 @@ def get_workflows():
             'id': 'compliance_audit_workflow',
             'name': 'Compliance & Privacy Audit',
             'description': 'GDPR, CCPA, and security compliance assessment with remediation guidance'
-        },
-        {
-            'id': 'web3_analysis_workflow',
-            'name': 'Web3 & Blockchain Security',
-            'description': 'Comprehensive blockchain domain analysis and crypto threat detection'
         }
     ]
     return jsonify(workflows)

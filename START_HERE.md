@@ -108,7 +108,7 @@ pip install --only-binary :all: scikit-learn
 
 ---
 
-### Problem: "Module not found: tensorflow" or similar
+### Problem: "Module not found" or similar
 
 **Solution:** These are optional modules. The app will work without them!
 
@@ -118,7 +118,6 @@ Just ignore warnings about:
 - spacy
 - celery
 - twilio
-- web3
 
 The core features work without these.
 
@@ -170,15 +169,14 @@ socketio.run(app, debug=True, host='0.0.0.0', port=5001)
 - PDF report generation
 - Real-time monitoring
 - API endpoints
-- Basic AI threat prediction (with scikit-learn)
+- Basic AI threat prediction
 
 ### ⚠️ OPTIONAL (May not work without extra packages):
-- Advanced TensorFlow AI models
+- Advanced AI models
 - Selenium browser automation
 - Celery background tasks
 - Twilio SMS notifications
 - Telegram bot alerts
-- Web3/blockchain analysis
 
 **The core features are more than enough for comprehensive domain analysis!**
 

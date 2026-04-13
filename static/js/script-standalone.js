@@ -159,7 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const compliance = data.compliance_audit || {};
         const geolocation = data.geolocation || {};
         const authenticity = data.authenticity || {};
-        const web3 = data.web3_analysis || {};
 
         const securityScore = Math.round(100 - (threat.risk_score || 50));
         const riskScore = Math.round(threat.risk_score || 45);
@@ -323,17 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
-            <div class="card">
-                <h3>Web3 & Blockchain Analysis</h3>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                    <span style="color: #a1a1aa;">Blockchain Related</span>
-                    <span style="color: #d4d4d8;">${web3.blockchain_type || 'Traditional Domain'}</span>
-                </div>
-                <div style="background: rgba(0, 0, 0, 0.6); padding: 0.75rem; border: 1px solid rgba(113, 113, 122, 0.3); border-radius: 0.5rem;">
-                    <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem;">Analysis:</p>
-                    <p style="color: #d4d4d8; font-size: 0.875rem;">${web3.analysis || 'No blockchain-related activity detected'}</p>
-                </div>
-            </div>
 
             <div class="card">
                 <h3>Wayback Machine History</h3>

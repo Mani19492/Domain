@@ -1,6 +1,6 @@
 # 🛡️ Advanced AI-Powered Domain Reconnaissance Platform
 
-A cutting-edge, AI-powered cybersecurity platform for comprehensive domain reconnaissance, threat intelligence, and security analysis. This enterprise-grade tool combines machine learning, blockchain analysis, and automated workflows to provide unparalleled insights into domain security and authenticity.
+A cutting-edge, AI-powered cybersecurity platform for comprehensive domain reconnaissance, threat intelligence, and security analysis. This enterprise-grade tool combines machine learning and automated workflows to provide unparalleled insights into domain security and authenticity.
 
 ## ⚡ Latest Updates (October 2025)
 
@@ -19,7 +19,6 @@ A cutting-edge, AI-powered cybersecurity platform for comprehensive domain recon
 ![Domain Reconnaissance Tool](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)
 ![AI](https://img.shields.io/badge/AI-Powered-purple.svg)
-![Web3](https://img.shields.io/badge/Web3-Compatible-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ## 🚀 Revolutionary Features
@@ -37,13 +36,6 @@ A cutting-edge, AI-powered cybersecurity platform for comprehensive domain recon
 - **Clickable Network Graphs**: Explore domain connections interactively
 - **Export Capabilities**: GraphML, GEXF, and JSON formats for external analysis
 - **Centrality Analysis**: Identify key nodes in domain networks
-
-### 🌐 Web3 & Blockchain Domain Support
-- **ENS Domain Analysis**: Ethereum Name Service integration
-- **Unstoppable Domains**: Support for .crypto, .nft, .blockchain domains
-- **Crypto Threat Detection**: Identify cryptocurrency scams and phishing
-- **DeFi Protocol Analysis**: Detect impersonation of popular DeFi platforms
-- **NFT Marketplace Scanning**: Analyze connections to NFT platforms
 
 ### ⚙️ Automated Workflow System
 - **No-Code Workflows**: Visual workflow builder with drag-and-drop interface
@@ -138,18 +130,6 @@ python app.py
 5. **Access the web interface**
 Open your browser and navigate to `http://localhost:5000`
 
-## 🔧 Configuration
-### Docker Deployment
-
-```bash
-# Using Docker Compose (Recommended)
-docker-compose up -d
-
-# Or build manually
-docker build -t domain-recon .
-docker run -p 5000:5000 domain-recon
-```
-
 ## 🔧 Advanced Configuration
 
 
@@ -170,7 +150,6 @@ VITE_GOOGLE_SAFE_BROWSING_API_KEY=your_google_safe_browsing_api_key_here
 REDIS_URL=redis://localhost:6379/0
 
 # Feature Flags
-ENABLE_WEB3_SCANNING=true
 ENABLE_AI_PREDICTIONS=true
 ENABLE_MONITORING=true
 ENABLE_WORKFLOWS=true
@@ -258,7 +237,6 @@ domain-recon-web/
 ├── auth_check.py             # Authenticity verification
 ├── ai_threat_predictor.py    # AI/ML threat analysis
 ├── graph_mapper.py           # Network graph analysis
-├── web3_scanner.py           # Blockchain domain analysis
 ├── workflow_automation.py    # Automated workflow system
 ├── monitoring_system.py      # Real-time monitoring
 ├── pdf_generator.py          # Enhanced PDF reports
@@ -296,12 +274,6 @@ domain-recon-web/
 - Interactive visualization generation
 - Export capabilities for external tools
 - Centrality and path analysis
-
-#### 🌐 Web3 Scanner (`web3_scanner.py`)
-- ENS and Unstoppable Domains integration
-- Cryptocurrency threat detection
-- DeFi and NFT analysis
-- Blockchain domain verification
 
 #### ⚙️ Workflow Automation (`workflow_automation.py`)
 - Celery-based task queue system
@@ -397,18 +369,6 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 gunicorn -w 4 -b 0.0.0.0:443 --certfile=cert.pem --keyfile=key.pem app:app
 ```
 
-#### Using Docker
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN apt-get update && apt-get install -y gcc g++ libffi-dev libssl-dev
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 5000
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
-```
-
 #### Environment Variables for Production
 ```env
 FLASK_ENV=production
@@ -443,7 +403,6 @@ We welcome contributions! Please follow these steps:
 - Include error handling
 - Write unit tests for new features
 - Test AI models thoroughly
-- Validate Web3 integrations
 - Ensure mobile compatibility
 - Update documentation
 
@@ -465,7 +424,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🏆 Awards & Recognition
 
-This platform represents the next generation of cybersecurity reconnaissance tools, combining traditional OSINT techniques with cutting-edge AI and blockchain analysis capabilities.
+This platform represents the next generation of cybersecurity reconnaissance tools, combining traditional OSINT techniques with cutting-edge AI capabilities.
 
 ## 📞 Support
 
@@ -478,7 +437,6 @@ This platform represents the next generation of cybersecurity reconnaissance too
 
 ### Upcoming Features
 - [ ] **Advanced AI Models**: Deep learning for threat prediction
-- [ ] **Blockchain Integration**: Full Web3 ecosystem support
 - [ ] **Enterprise Dashboard**: Multi-tenant architecture
 - [ ] **API Marketplace**: Third-party integration ecosystem
 - [ ] **Mobile Applications**: Native iOS and Android apps

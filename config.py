@@ -38,7 +38,6 @@ class Config:
     SESSION_TIMEOUT_MINUTES = int(os.getenv('SESSION_TIMEOUT_MINUTES', 30))
     
     # Feature Flags
-    ENABLE_WEB3_SCANNING = os.getenv('ENABLE_WEB3_SCANNING', 'true').lower() == 'true'
     ENABLE_AI_PREDICTIONS = os.getenv('ENABLE_AI_PREDICTIONS', 'true').lower() == 'true'
     ENABLE_MONITORING = os.getenv('ENABLE_MONITORING', 'true').lower() == 'true'
     ENABLE_WORKFLOWS = os.getenv('ENABLE_WORKFLOWS', 'true').lower() == 'true'
