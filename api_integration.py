@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from typing import Dict, List, Any, Optional
@@ -22,6 +23,9 @@ class APIIntegrationManager:
     def __init__(self, app: Flask):
         self.app = app
         self.api = Api(app)
+        
+        # Use /tmp for SQLite on Vercel
+        self.db_path = '/tmp/api_management.db' if os.environ.get('VERCEL') else 'api_management.db'
         
         # Enable CORS for all domains
         CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -88,13 +92,14 @@ class APIIntegrationManager:
         # Register API endpoints
         self.register_endpoints()
         
-        # Start background services
-        self.start_background_services()
+        # Start background services (disabled on Vercel)
+        if not os.environ.get('VERCEL'):
+            self.start_background_services()
     
     def init_api_database(self):
         """Initialize API management database."""
         try:
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             # API keys table
@@ -225,7 +230,7 @@ class APIIntegrationManager:
             # Hash the provided key
             key_hash = hashlib.sha256(api_key.encode()).hexdigest()
             
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -264,7 +269,7 @@ class APIIntegrationManager:
             # This is a simplified rate limiting implementation
             # In production, you'd use Redis or similar for distributed rate limiting
             
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             # Count requests in the last hour
@@ -291,7 +296,7 @@ class APIIntegrationManager:
     def log_api_usage(self, key_id: str, request_obj):
         """Log API usage for analytics and monitoring."""
         try:
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -316,7 +321,7 @@ class APIIntegrationManager:
     def send_webhook(self, event_type: str, data: dict):
         """Send webhook notifications to subscribed endpoints."""
         try:
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -510,7 +515,7 @@ class APIIntegrationManager:
             """Clean up expired API keys."""
             while True:
                 try:
-                    conn = sqlite3.connect('api_management.db')
+                    conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
                     
                     # Deactivate expired keys
@@ -747,7 +752,7 @@ class IntegrationsAPI(Resource):
             self.api_manager.external_integrations[integration_name].update(config)
             
             # Save to database
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -790,7 +795,7 @@ class WebhooksAPI(Resource):
             if not endpoint_url or not events:
                 return {'error': 'endpoint_url and events required'}, 400
             
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -847,7 +852,7 @@ class APIKeysAPI(Resource):
             if expires_days:
                 expires_at = (datetime.now() + timedelta(days=expires_days)).isoformat()
             
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -889,7 +894,7 @@ class APIUsageAPI(Resource):
         try:
             key_id = request.api_key_info['key_id']
             
-            conn = sqlite3.connect('api_management.db')
+            conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             # Get usage stats for last 30 days

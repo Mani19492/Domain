@@ -1,3 +1,4 @@
+import os
 import asyncio
 import websockets
 import json
@@ -29,8 +30,16 @@ class MonitoringAlert:
     resolved: bool = False
 
 class RealTimeMonitor:
-    def __init__(self, db_path: str = 'monitoring.db'):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # Use /tmp for SQLite on Vercel
+            if os.environ.get('VERCEL'):
+                self.db_path = '/tmp/monitoring.db'
+            else:
+                self.db_path = 'monitoring.db'
+        else:
+            self.db_path = db_path
+            
         self.active_monitors = {}
         self.websocket_clients = set()
         self.alert_queue = []
@@ -39,8 +48,9 @@ class RealTimeMonitor:
         # Initialize database
         self.init_database()
         
-        # Start background monitoring
-        self.start_monitoring_thread()
+        # Start background monitoring (disabled on Vercel)
+        if not os.environ.get('VERCEL'):
+            self.start_monitoring_thread()
     
     def init_database(self):
         """Initialize monitoring database."""

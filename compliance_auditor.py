@@ -1,16 +1,24 @@
 import requests
 import logging
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    HAS_SELENIUM = True
+except ImportError:
+    HAS_SELENIUM = False
 import re
 import json
 from typing import Dict, List, Any
 from datetime import datetime
-import spacy
+try:
+    import spacy
+    HAS_SPACY = True
+except ImportError:
+    HAS_SPACY = False
 from urllib.parse import urljoin, urlparse
 import time
 
@@ -37,11 +45,12 @@ class ComplianceAuditor:
         }
         
         # Load spaCy model for NLP
-        try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logger.warning("spaCy model not found. NLP features will be limited.")
-            self.nlp = None
+        self.nlp = None
+        if HAS_SPACY:
+            try:
+                self.nlp = spacy.load("en_core_web_sm")
+            except OSError:
+                logger.warning("spaCy model not found. NLP features will be limited.")
     
     def audit_compliance(self, domain: str) -> dict:
         """Perform comprehensive compliance audit."""
@@ -226,9 +235,14 @@ class ComplianceAuditor:
             logger.error(f"Error auditing CCPA compliance: {str(e)}")
             return {'score': 0, 'error': str(e)}
     
-    def _analyze_cookies(self, url: str) -> dict:
         """Analyze cookies using headless browser."""
         try:
+            if not HAS_SELENIUM:
+                return {
+                    'total_cookies': 0,
+                    'note': 'Selenium not installed - skipping browser-based cookie analysis',
+                    'findings': ['ℹ️ Skipping automated cookie analysis (Lite Mode)']
+                }
             # Set up headless Chrome
             chrome_options = Options()
             chrome_options.add_argument("--headless")
@@ -510,6 +524,12 @@ class ComplianceAuditor:
     def _check_consent_mechanisms(self, url: str) -> dict:
         """Check for consent mechanisms and banners."""
         try:
+            if not HAS_SELENIUM:
+                return {
+                    'cookie_banner_found': False,
+                    'note': 'Selenium not installed - skipping browser-based consent check',
+                    'findings': ['ℹ️ Skipping automated consent check (Lite Mode)']
+                }
             # Set up headless browser for dynamic content
             chrome_options = Options()
             chrome_options.add_argument("--headless")

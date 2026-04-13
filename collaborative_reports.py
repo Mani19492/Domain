@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from typing import Dict, List, Any, Optional
@@ -37,8 +38,12 @@ class CollaborativeReport:
     annotations: List[ReportAnnotation] = None
 
 class CollaborativeReportManager:
-    def __init__(self, db_path: str = 'collaborative_reports.db'):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # Use /tmp for SQLite on Vercel
+            self.db_path = '/tmp/collaborative_reports.db' if os.environ.get('VERCEL') else 'collaborative_reports.db'
+        else:
+            self.db_path = db_path
         self.active_sessions = {}
         self.encryption_key = Fernet.generate_key()
         self.cipher_suite = Fernet(self.encryption_key)

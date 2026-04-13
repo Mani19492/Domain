@@ -1,10 +1,14 @@
-import numpy as np
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier, IsolationForest
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-import joblib
+try:
+    import numpy as np
+    import pandas as pd
+    from sklearn.ensemble import RandomForestClassifier, IsolationForest
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+    import joblib
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    logger.warning("ML libraries (sklearn, pandas, numpy) not available. Using rule-based fallback.")
 import logging
 from datetime import datetime, timedelta
 import re
@@ -18,7 +22,10 @@ class ThreatPredictor:
     def __init__(self):
         self.phishing_model = None
         self.anomaly_detector = None
-        self.scaler = StandardScaler()
+        if ML_AVAILABLE:
+            self.scaler = StandardScaler()
+        else:
+            self.scaler = None
         self.is_trained = False
         
     def extract_domain_features(self, domain_data: dict) -> np.array:
@@ -199,6 +206,21 @@ class ThreatPredictor:
     
     def predict_threat_level(self, domain_data: dict) -> dict:
         """Predict threat level for a domain."""
+        if not ML_AVAILABLE:
+            # Fallback to pure rule-based
+            rule_based_flags = self._rule_based_analysis(domain_data)
+            risk_score = min(100, len(rule_based_flags) * 20)
+            return {
+                'risk_score': risk_score,
+                'phishing_probability': 0.0,
+                'phishing_risk': 'Low' if risk_score < 40 else 'Medium' if risk_score < 70 else 'High',
+                'is_anomaly': False,
+                'anomaly_score': 0,
+                'rule_based_flags': rule_based_flags,
+                'recommendations': self._generate_recommendations(domain_data, risk_score),
+                'note': 'ML models unavailable, using rule-based analysis only'
+            }
+
         if not self.is_trained:
             self.load_models()
         

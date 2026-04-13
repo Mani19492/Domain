@@ -1,3 +1,4 @@
+import os
 import schedule
 import time
 import json
@@ -24,8 +25,12 @@ class MonitoringJob:
     created_at: str
 
 class DomainMonitoringSystem:
-    def __init__(self, db_path: str = 'monitoring.db'):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # Use /tmp for SQLite on Vercel
+            self.db_path = '/tmp/monitoring.db' if os.environ.get('VERCEL') else 'monitoring.db'
+        else:
+            self.db_path = db_path
         self.monitoring_jobs = {}
         self.public_monitoring = {}
         self.alert_thresholds = {
@@ -38,7 +43,9 @@ class DomainMonitoringSystem:
         }
         self.init_database()
         self.load_monitoring_jobs()
-        self.start_scheduler()
+        # Start background scheduler (disabled on Vercel)
+        if not os.environ.get('VERCEL'):
+            self.start_scheduler()
     
     def init_database(self):
         """Initialize SQLite database for monitoring jobs."""
